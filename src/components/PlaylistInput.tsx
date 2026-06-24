@@ -70,18 +70,18 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
 
   return (
     <>
-      <div className="w-full glass-panel border-b border-white/5 px-6 py-3.5 sticky top-0 z-40 transition-all">
+      <div className="w-full bg-[#030303]/75 backdrop-blur-xl border-b border-white/5 px-6 py-3.5 sticky top-0 z-40 transition-all shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           
           {/* Logo / Branding Section */}
-          <div className="flex items-center space-x-3.5 select-none">
-            <div className="bg-red-600/10 border border-red-650/30 p-2 rounded-xl text-[#E50914] shadow-[0_0_20px_rgba(229,9,20,0.2)] animate-pulse">
-              <Film className="w-5 h-5 stroke-[1.8]" />
+          <div className="flex items-center space-x-3 select-none">
+            <div className="bg-red-955/20 border border-red-500/30 p-2.5 rounded-xl text-red-500 shadow-[0_0_15px_rgba(229,9,20,0.15)] animate-pulse">
+              <Film className="w-4.5 h-4.5 stroke-[1.8]" />
             </div>
             <div>
-              <h1 className="text-sm font-black tracking-widest bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent uppercase flex items-center gap-1.5">
+              <h1 className="text-xs font-black tracking-widest text-zinc-200 uppercase flex items-center gap-1.5 font-sans">
                 NEOSTREAM 
-                <span className="text-[#E50914] text-[9px] font-black px-1.5 py-0.5 rounded-md bg-red-600/10 border border-red-605/20 tracking-wider">
+                <span className="text-red-500 text-[8px] font-black px-1.5 py-0.5 rounded bg-red-955/20 border border-red-500/20 tracking-wider">
                   IPTV
                 </span>
               </h1>
@@ -90,10 +90,10 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
 
           {/* Active Playlist metadata info */}
           {hasPlaylist && (
-            <div className="hidden lg:flex items-center gap-3 bg-zinc-950/40 px-3.5 py-1.5 rounded-full border border-white/5 text-[11px] text-zinc-300 backdrop-blur-md">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
-              <span className="font-bold text-zinc-400 tracking-wide">Active:</span>
-              <span className="truncate max-w-[200px] text-zinc-200 font-medium" title={currentUrl}>
+            <div className="hidden lg:flex items-center gap-2.5 bg-zinc-950/60 px-4 py-2 rounded-xl border border-white/5 text-[10px] text-zinc-350 backdrop-blur-md font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-zinc-500 tracking-wider">ACTIVE FEED:</span>
+              <span className="truncate max-w-[200px] text-zinc-200 font-bold" title={currentUrl}>
                 {getCleanPlaylistName(currentUrl)}
               </span>
               {currentEpgUrl && (
@@ -107,8 +107,8 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
                 </span>
               )}
               {useCorsProxy && (
-                <span className="ml-1 bg-red-950/30 border border-red-600/20 text-red-400 text-[9px] px-2 py-0.5 rounded-md font-extrabold tracking-wide uppercase select-none">
-                  PROXY
+                <span className="ml-1 bg-red-955/25 border border-red-500/20 text-red-400 text-[8px] px-2 py-0.5 rounded font-extrabold tracking-widest uppercase select-none">
+                  PROXY ACTIVE
                 </span>
               )}
             </div>
@@ -120,9 +120,9 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="bg-zinc-900/60 hover:bg-zinc-800/80 hover:text-white border border-white/5 text-zinc-200 rounded-xl px-4 py-2 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md hover:scale-[1.02]"
+                className="bg-zinc-900/60 hover:bg-zinc-800/80 hover:text-white border border-white/5 text-zinc-300 rounded-xl px-3.5 py-2 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md hover:scale-[1.01]"
               >
-                <Link className="h-3.5 w-3.5 text-[#E50914]" />
+                <Link className="h-3.5 w-3.5 text-red-500" />
                 Change Playlist
               </button>
             )}
@@ -131,7 +131,7 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
               <button
                 type="button"
                 onClick={handleClear}
-                className="bg-zinc-900/40 hover:bg-red-500/10 border border-white/5 hover:border-red-500/20 text-zinc-450 hover:text-red-400 rounded-xl p-2 text-xs transition-all cursor-pointer"
+                className="bg-zinc-900/60 hover:bg-red-955/20 border border-white/5 hover:border-red-500/20 text-zinc-450 hover:text-red-500 rounded-xl p-2 text-xs transition-all cursor-pointer"
                 title="Clear current playlist"
               >
                 <Trash2 className="h-4 w-4" />
@@ -141,18 +141,18 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
             <div className="relative group">
               <button 
                 type="button"
-                className="text-zinc-550 hover:text-zinc-350 transition-colors p-1"
+                className="text-zinc-500 hover:text-zinc-300 transition-colors p-1"
                 title="Help info"
               >
                 <HelpCircle className="h-4.5 w-4.5" />
               </button>
-              <div className="absolute right-0 top-full mt-2 w-72 glass-panel-heavy text-zinc-450 text-xs p-4 rounded-2xl shadow-2xl invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-50 leading-relaxed border border-white/5">
-                <h4 className="font-bold text-white mb-1.5 flex items-center gap-1.5">
+              <div className="absolute right-0 top-full mt-2 w-72 bg-[#0c0c10]/95 backdrop-blur-xl border border-white/10 text-zinc-400 text-xs p-4.5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85)] invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-50 leading-relaxed font-semibold">
+                <h4 className="font-extrabold text-white mb-1.5 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                   CORS & Connection Info
                 </h4>
                 <p className="mb-2">
-                  Some IPTV providers block browser playback using strict <span className="text-[#E50914] font-bold">CORS headers</span>.
+                  Some IPTV providers block browser playback using strict <span className="text-red-400 font-bold">CORS headers</span>.
                 </p>
                 <p>
                   Enable the **CORS Proxy server** inside Playlist Settings to stream restricted sources smoothly.

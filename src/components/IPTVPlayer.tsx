@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tv2, AlertTriangle, X, Menu, Link, Download, RefreshCw, Radio } from 'lucide-react';
+import { Tv2, AlertTriangle, X, Menu, Link, Download, RefreshCw, Radio, Film } from 'lucide-react';
 import { PlaylistInput } from './PlaylistInput';
 import { Sidebar } from './Sidebar';
 import { VideoPlayer } from './VideoPlayer';
@@ -334,47 +334,44 @@ export const IPTVPlayer: React.FC = () => {
             <div className="absolute bottom-[10%] left-[10%] w-[450px] h-[450px] bg-red-600/[0.02] rounded-full blur-[100px] pointer-events-none" />
             
             {/* Top Navigation Row */}
-            <div className="w-full max-w-4xl mx-auto flex items-center justify-between shrink-0 z-10">
+            <div className="w-full max-w-4xl mx-auto flex items-center justify-between shrink-0 z-10 select-none">
               <div className="flex items-center space-x-3">
-                <div className="bg-red-600/10 border border-red-650/20 p-2.5 rounded-xl text-red-500 shadow-[0_0_15px_rgba(229,9,20,0.15)]">
-                  <Tv2 className="h-5 w-5 stroke-[1.8]" />
+                <div className="bg-red-955/20 border border-red-500/30 p-2.5 rounded-xl text-red-500 shadow-[0_0_15px_rgba(229,9,20,0.15)]">
+                  <Film className="h-4.5 w-4.5 stroke-[1.8]" />
                 </div>
-                <span className="text-sm font-black tracking-widest text-zinc-200">
-                  NEOSTREAM <span className="text-red-500 font-bold px-1.5 py-0.5 rounded-md bg-red-600/10 border border-red-605/20 text-[9px] tracking-wider uppercase ml-1">IPTV</span>
+                <span className="text-xs font-black tracking-widest text-zinc-200 uppercase flex items-center gap-1.5 font-sans">
+                  NEOSTREAM <span className="text-red-500 text-[8px] font-black px-1.5 py-0.5 rounded bg-red-955/20 border border-red-500/20 tracking-wider">IPTV</span>
                 </span>
               </div>
-              <span className="text-[9px] uppercase font-bold font-mono tracking-widest text-zinc-500 border border-white/5 bg-zinc-900/40 px-3 py-1 rounded-lg">
+              <span className="text-[9px] font-extrabold uppercase font-mono tracking-widest text-zinc-400 border border-white/5 bg-zinc-900/60 px-3 py-1.5 rounded-xl">
                 v1.0.0
               </span>
             </div>
 
             {/* Central Main Input Section */}
-            <div className="w-full max-w-xl mx-auto flex flex-col items-center py-10 md:py-16 text-center z-10">
-              <div className="w-full glass-panel border border-white/5 p-8 rounded-[24px] shadow-2xl space-y-6 relative overflow-hidden animate-slide-up">
+            <div className="w-full max-w-4xl mx-auto flex flex-col items-center py-12 md:py-20 text-center z-10">
+              <div className="w-full space-y-8 animate-slide-up">
                 
-                {/* Accent red indicator bar */}
-                <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#E50914]" />
-
-                <div className="space-y-2 text-center pb-2">
-                  <h2 className="text-2xl font-black tracking-tight text-white bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent uppercase">
+                <div className="space-y-3 text-center pb-2 select-none">
+                  <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white uppercase bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent">
                     Connect Playlist
                   </h2>
-                  <p className="text-zinc-450 text-xs max-w-xs mx-auto leading-relaxed">
+                  <p className="text-zinc-450 text-xs md:text-sm max-w-lg mx-auto leading-relaxed font-semibold">
                     Paste an M3U playlist link to start playing live television streams instantly.
                   </p>
                 </div>
 
                 {/* URL Input Form */}
-                <form onSubmit={handleLandingSubmit} className="w-full space-y-4">
+                <form onSubmit={handleLandingSubmit} className="w-full max-w-2xl mx-auto space-y-5">
                   <div className="relative group text-left">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-550 group-focus-within:text-red-500 transition-colors">
-                      <Link className="h-4 w-4" />
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-red-500 transition-colors">
+                      <Link className="h-4.5 w-4.5" />
                     </div>
                     <input
                       type="url"
                       required
                       placeholder="Enter M3U Playlist URL"
-                      className="w-full glass-input rounded-xl pl-10 pr-4 py-3.5 text-xs text-zinc-100 placeholder-zinc-550 focus:outline-none focus:ring-0 transition-all duration-200"
+                      className="w-full glass-input rounded-2xl pl-12 pr-4 py-4 text-sm text-zinc-100 placeholder-zinc-550 focus:outline-none focus:ring-0 transition-all duration-200 font-bold"
                       value={landingUrlInput}
                       onChange={(e) => setLandingUrlInput(e.target.value)}
                       disabled={isLoading}
@@ -383,13 +380,13 @@ export const IPTVPlayer: React.FC = () => {
 
                   {/* EPG Input field (Optional) */}
                   <div className="relative group text-left">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-550 group-focus-within:text-red-500 transition-colors">
-                      <Radio className="h-4 w-4" />
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-red-500 transition-colors">
+                      <Radio className="h-4.5 w-4.5" />
                     </div>
                     <input
                       type="url"
                       placeholder="EPG XML TV URL (Optional)"
-                      className="w-full glass-input rounded-xl pl-10 pr-4 py-3.5 text-xs text-zinc-100 placeholder-zinc-550 focus:outline-none focus:ring-0 transition-all duration-200"
+                      className="w-full glass-input rounded-2xl pl-12 pr-4 py-4 text-sm text-zinc-100 placeholder-zinc-550 focus:outline-none focus:ring-0 transition-all duration-200 font-bold"
                       value={landingEpgInput}
                       onChange={(e) => setLandingEpgInput(e.target.value)}
                       disabled={isLoading}
@@ -397,21 +394,21 @@ export const IPTVPlayer: React.FC = () => {
                   </div>
 
                   {/* CORS Proxy toggle option */}
-                  <div className="flex items-center justify-between bg-black/40 border border-white/5 rounded-xl p-3.5 text-left transition-all">
+                  <div className="flex items-center justify-between bg-black/40 border border-white/5 rounded-2xl p-4.5 text-left transition-all">
                     <div className="flex flex-col pr-4">
-                      <span className="text-xs font-bold text-zinc-300">Use CORS Proxy server</span>
-                      <span className="text-[10px] text-zinc-500 leading-relaxed mt-0.5">
+                      <span className="text-xs md:text-sm font-bold text-zinc-350">Use CORS Proxy server</span>
+                      <span className="text-[10px] md:text-xs text-zinc-500 leading-relaxed mt-0.5 font-semibold">
                         Bypasses browser stream connection blockages using corsproxy.io.
                       </span>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer select-none">
+                    <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
                       <input 
                         type="checkbox" 
                         className="sr-only peer"
                         checked={useCorsProxy}
                         onChange={(e) => setUseCorsProxy(e.target.checked)}
                       />
-                      <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-500 peer-checked:after:bg-white after:border-transparent after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#E50914]" />
+                      <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-500 peer-checked:after:bg-white after:border-transparent after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-[#E50914]" />
                     </label>
                   </div>
 
@@ -419,26 +416,26 @@ export const IPTVPlayer: React.FC = () => {
                     <button
                       type="button"
                       disabled
-                      className="w-full bg-red-600/40 border border-white/5 text-white rounded-xl py-3.5 text-xs font-bold flex items-center justify-center gap-2 cursor-wait"
+                      className="w-full bg-red-600/40 border border-white/5 text-white rounded-2xl py-4 text-xs md:text-sm font-bold flex items-center justify-center gap-2 cursor-wait"
                     >
-                      <RefreshCw className="h-4 w-4 animate-spin text-red-200" />
+                      <RefreshCw className="h-4.5 w-4.5 animate-spin text-red-200" />
                       Parsing Playlist Channels...
                     </button>
                   ) : (
                     <button
                       type="submit"
                       disabled={!landingUrlInput.trim()}
-                      className="w-full bg-[#E50914] hover:bg-[#F40B17] text-white disabled:bg-zinc-850 disabled:text-zinc-550 disabled:border-transparent rounded-xl py-3.5 text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-xl hover:scale-[1.01]"
+                      className="w-full bg-[#E50914] hover:bg-[#F40B17] text-white disabled:bg-zinc-850 disabled:text-zinc-550 disabled:border-transparent rounded-2xl py-4 text-xs md:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-xl hover:scale-[1.01]"
                     >
-                      <Download className="h-4 w-4" />
+                      <Download className="h-4.5 w-4.5" />
                       Connect & Stream
                     </button>
                   )}
                 </form>
 
                 {/* Minimal Help info label */}
-                <div className="flex items-center justify-center gap-1.5 text-[10px] text-zinc-500 pt-2 select-none">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-650 shrink-0" />
+                <div className="flex items-center justify-center gap-1.5 text-[10px] md:text-xs text-zinc-500 pt-2 select-none font-bold">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-650 shrink-0 animate-pulse" />
                   Supports standard HLS/M3U8 audio & video feeds
                 </div>
               </div>

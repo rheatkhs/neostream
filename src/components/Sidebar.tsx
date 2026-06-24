@@ -39,6 +39,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return ['All', ...Array.from(list).sort()];
   }, [channels]);
 
+  // Precalculate channel count per category
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    counts['All'] = channels.length;
+    channels.forEach(ch => {
+      if (ch.group) {
+        counts[ch.group] = (counts[ch.group] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [channels]);
+
   // Filter channels based on search term and category
   const filteredChannels = useMemo(() => {
     return channels.filter(ch => {
@@ -96,30 +108,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-zinc-950/20 backdrop-blur-xl border-r border-white/5 select-none">
+    <div className="w-full h-full flex flex-col bg-zinc-950/20 backdrop-blur-xl border-r border-white/5 select-none font-sans">
       
       {/* Search and Category Filter Module */}
-      <div className="p-4.5 border-b border-white/5 space-y-3.5 bg-black/30">
+      <div className="p-4.5 border-b border-white/5 space-y-3.5 bg-black/40">
         
         {/* Playlist metadata info banner */}
-        <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-0.5 px-0.5 tracking-wider font-semibold uppercase">
+        <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-0.5 px-0.5 tracking-widest font-extrabold uppercase">
           <span className="truncate pr-2" title={playlistName}>
-            Source: <span className="text-zinc-300 font-bold">{playlistName}</span>
+            Source: <span className="text-zinc-300 font-black">{playlistName}</span>
           </span>
-          <span className="shrink-0 bg-white/5 border border-white/10 text-zinc-350 px-2 py-0.5 rounded-full font-mono">
+          <span className="shrink-0 bg-white/5 border border-white/10 text-zinc-300 px-2.5 py-0.5 rounded-full font-mono text-[9px] font-bold">
             {filteredChannels.length} / {channels.length}
           </span>
         </div>
 
         {/* Search input field */}
         <div className="relative group">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-550 group-focus-within:text-[#E50914] transition-colors">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-[#E50914] transition-colors">
             <Search className="h-4 w-4" />
           </div>
           <input
             type="text"
             placeholder="Search channels..."
-            className="w-full glass-input rounded-xl pl-10 pr-4 py-2.5 text-xs text-zinc-100 placeholder-zinc-550 focus:outline-none focus:ring-0"
+            className="w-full glass-input rounded-xl pl-10 pr-4 py-2.5 text-xs text-zinc-100 placeholder-zinc-550 focus:outline-none focus:ring-0 font-bold"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -130,19 +142,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="relative">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="w-full flex items-center justify-between bg-zinc-900/40 hover:bg-zinc-900/75 border border-white/5 text-xs text-zinc-300 rounded-xl px-3 py-2.5 transition-all cursor-pointer hover:border-white/10"
+              className={`w-full flex items-center justify-between bg-black/45 hover:bg-black/60 border text-xs rounded-xl px-3.5 py-2.5 transition-all cursor-pointer ${
+                isDropdownOpen ? 'border-red-500/30 ring-1 ring-red-500/20' : 'border-white/5 hover:border-white/10'
+              }`}
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Folder className="h-4 w-4 text-[#E50914] shrink-0" />
-                <span className="truncate font-semibold tracking-wide">{selectedCategory === 'All' ? 'All Categories' : selectedCategory}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <Folder className="h-3.5 w-3.5 text-[#E50914] shrink-0" />
+                <span className="truncate font-black text-zinc-200 uppercase tracking-widest text-[9px] mt-[1px]">
+                  {selectedCategory === 'All' ? 'All Categories' : selectedCategory}
+                </span>
+                <span className="text-[9px] font-bold text-zinc-500 bg-white/5 px-1.5 py-0.5 rounded">
+                  {categoryCounts[selectedCategory] || 0}
+                </span>
               </div>
-              <ChevronDown className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
+              <ChevronDown className={`h-3.5 w-3.5 text-zinc-450 shrink-0 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-red-550' : ''}`} />
             </button>
 
             {isDropdownOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
-                <div className="absolute left-0 right-0 mt-1.5 max-h-60 overflow-y-auto glass-panel-heavy border border-white/5 rounded-2xl shadow-2xl z-50 custom-scrollbar animate-fade-in p-1">
+                <div className="absolute left-0 right-0 mt-2 max-h-64 overflow-y-auto bg-[#0d0d12] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85)] z-50 custom-scrollbar animate-fade-in p-1.5 flex flex-col gap-1">
                   {categories.map((category) => (
                     <button
                       key={category}
@@ -151,14 +170,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         setSelectedCategory(category);
                         setIsDropdownOpen(false);
                       }}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-left text-xs rounded-xl transition-all cursor-pointer ${
+                      className={`w-full group/cat flex items-center justify-between px-3 py-2 text-left text-xs rounded-xl transition-all cursor-pointer ${
                         selectedCategory === category 
-                          ? 'text-red-400 font-extrabold bg-red-950/20 border border-red-500/10' 
-                          : 'text-zinc-400 hover:bg-white/5 border border-transparent'
+                          ? 'text-white font-extrabold bg-red-955/20 border border-red-500/20 shadow-inner' 
+                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent'
                       }`}
                     >
-                      <Folder className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
-                      <span className="truncate">{category}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Folder className={`h-3.5 w-3.5 shrink-0 ${selectedCategory === category ? 'text-red-500' : 'text-zinc-500'}`} />
+                        <span className="truncate font-bold tracking-wide">{category}</span>
+                      </div>
+                      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                        selectedCategory === category
+                          ? 'bg-red-500/10 text-red-400'
+                          : 'bg-white/5 text-zinc-500'
+                      }`}>
+                        {categoryCounts[category] || 0}
+                      </span>
                     </button>
                   ))}
                 </div>

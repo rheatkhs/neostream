@@ -55,6 +55,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [brightness, setBrightness] = useState<number>(1);
   const [contrast, setContrast] = useState<number>(1);
   const [saturation, setSaturation] = useState<number>(1);
+  const [logoError, setLogoError] = useState(false);
+
+  useEffect(() => {
+    setLogoError(false);
+  }, [channel]);
 
   const controlsTimeoutRef = useRef<number | null>(null);
 
@@ -147,6 +152,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setIsLoading(false);
       setIsPlaying(false);
     }
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
   }, [channel, useCorsProxy, corsProxyUrl]);
 
   // Handle volume changes
@@ -358,10 +369,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none z-10 animate-fade-in" onClick={(e) => e.stopPropagation()}>
           <div className="glass-panel border border-white/5 p-4 rounded-2xl flex items-start gap-3.5 max-w-[85%] sm:max-w-[60%] shadow-2xl pointer-events-auto">
             <div className="w-10 h-10 bg-black/60 rounded-xl overflow-hidden flex items-center justify-center border border-white/5 shrink-0 mt-0.5">
-              {channel.logo ? (
-                <img src={channel.logo} alt="" className="w-full h-full object-contain p-1" onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }} />
+              {channel.logo && !logoError ? (
+                <img src={channel.logo} alt="" className="w-full h-full object-contain p-1" onError={() => setLogoError(true)} />
               ) : (
                 <Tv className="w-5 h-5 text-zinc-550" />
               )}

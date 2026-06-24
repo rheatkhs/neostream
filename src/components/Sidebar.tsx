@@ -23,6 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [logoErrors, setLogoErrors] = useState<Record<string, boolean>>({});
 
   // Virtualized Scroll State
   const containerRef = useRef<HTMLDivElement>(null);
@@ -238,7 +239,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       ? 'bg-black/60 border-red-500/10' 
                       : 'bg-zinc-950/80 border-white/5 group-hover:border-white/10'
                   }`}>
-                    {channel.logo ? (
+                    {channel.logo && !logoErrors[channel.id] ? (
                       <img
                         src={channel.logo}
                         alt={channel.name}
@@ -248,13 +249,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           e.currentTarget.classList.remove('opacity-0');
                           e.currentTarget.classList.add('opacity-100');
                         }}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          const parent = (e.target as HTMLImageElement).parentNode as HTMLElement;
-                          if (parent) {
-                            const iconHtml = `<svg class="h-4.5 w-4.5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>`;
-                            parent.innerHTML = iconHtml;
-                          }
+                        onError={() => {
+                          setLogoErrors(prev => ({ ...prev, [channel.id]: true }));
                         }}
                       />
                     ) : (

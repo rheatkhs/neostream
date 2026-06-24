@@ -19,10 +19,10 @@ const workerCode = `
           } else if (line.startsWith('#EXTINF:')) {
             const id = 'ch_' + Math.random().toString(36).substr(2, 9) + '_' + i;
             
-            const nameMatch = line.match(/,(.+)$/);
-            const name = nameMatch ? nameMatch[1].trim() : 'Unknown Channel';
+            const commaIndex = line.lastIndexOf(',');
+            const name = commaIndex !== -1 ? line.substring(commaIndex + 1).trim() : 'Unknown Channel';
             
-            const logoMatch = line.match(/tvg-logo="([^"]+)"/i);
+            const logoMatch = line.match(/tvg-logo="([^"]+)"/i) || line.match(/logo="([^"]+)"/i);
             const logo = logoMatch ? logoMatch[1] : '';
             
             const groupMatch = line.match(/group-title="([^"]+)"/i);

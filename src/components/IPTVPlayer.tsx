@@ -80,8 +80,8 @@ export const IPTVPlayer: React.FC = () => {
         const name = url.substring(url.lastIndexOf('/') + 1) || 'IPTV Playlist';
         setPlaylistName(name);
         saveToLocalStorage(url, name, parsed);
-        // Default to first channel
-        setActiveChannel(parsed[0]);
+        // Do not auto-play first channel; display clean welcome screen instead
+        setActiveChannel(null);
       }
     } catch (error) {
       console.error('Fetch error:', error);

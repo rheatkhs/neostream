@@ -290,11 +290,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel }) => {
 
       {/* Connection & Buffering HUD */}
       {isLoading && (
-        <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm flex flex-col items-center justify-center space-y-3 z-20">
-          <RefreshCw className="h-10 w-10 text-emerald-400 animate-spin" />
-          <div className="text-center">
-            <p className="text-zinc-200 text-xs font-semibold tracking-wider uppercase">Connecting stream</p>
-            <p className="text-zinc-500 text-[10px] mt-1">{channel?.name}</p>
+        <div className="absolute inset-0 bg-black/75 flex items-center justify-center z-20 animate-fade-in">
+          <div className="relative flex items-center justify-center">
+            <div className="w-12 h-12 border-4 border-zinc-800/30 rounded-full" />
+            <div className="absolute w-12 h-12 border-4 border-t-[#E50914] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
           </div>
         </div>
       )}
@@ -330,7 +329,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel }) => {
             </div>
             <div className="min-w-0">
               <h2 className="text-xs font-bold text-zinc-100 truncate">{channel.name}</h2>
-              <p className="text-[10px] text-emerald-400 font-medium truncate mt-0.5">{channel.group || 'Live Stream'}</p>
+              <p className="text-[10px] text-red-500 font-medium truncate mt-0.5">{channel.group || 'Live Stream'}</p>
             </div>
           </div>
 
@@ -354,7 +353,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel }) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={togglePlay}
-                className="bg-emerald-500 hover:bg-emerald-400 text-black p-2.5 rounded-xl transition-all cursor-pointer hover:scale-105"
+                className="bg-[#E50914] hover:bg-[#B80710] text-white p-2.5 rounded-xl transition-all cursor-pointer hover:scale-105"
                 title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
               >
                 {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
@@ -385,7 +384,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel }) => {
                 step="0.05"
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
-                className="w-20 accent-emerald-500 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
+                className="w-20 accent-red-650 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
               />
             </div>
 

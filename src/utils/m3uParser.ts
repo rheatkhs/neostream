@@ -49,7 +49,7 @@ export function parseM3U(content: string): IPTVChannel[] {
         // Only accept http/https streaming urls
         if (line.startsWith('http://') || line.startsWith('https://')) {
           channels.push({
-            id: `${channels.length}-${Math.random().toString(36).substring(2, 9)}`,
+            id: String(channels.length),
             name: currentInfo.name || 'Unnamed Channel',
             logo: currentInfo.logo,
             url: line,

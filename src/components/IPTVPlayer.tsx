@@ -1,24 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Tv2, Radio, AlertTriangle, FileUp, X, Menu } from 'lucide-react';
-import { PlaylistInput, DEMO_PLAYLIST_NAME } from './PlaylistInput';
+import React, { useState, useEffect } from 'react';
+import { Tv2, AlertTriangle, X, Menu, Link, Download, RefreshCw } from 'lucide-react';
+import { PlaylistInput } from './PlaylistInput';
 import { Sidebar } from './Sidebar';
 import { VideoPlayer } from './VideoPlayer';
 import { parseM3U } from '../utils/m3uParser';
 import type { IPTVChannel } from '../utils/m3uParser';
-
-// Predefined CORS-friendly demo streams for instant testing
-const DEMO_PLAYLIST_M3U = `#EXTM3U
-#EXTINF:-1 tvg-logo="https://raw.githubusercontent.com/iptv-org/iptv/master/snapshots/logos/nasa.png" group-title="Science",NASA TV
-https://ntv1.akamaized.net/hls/live/2014027/NASA-NTV1-Public/master.m3u8
-#EXTINF:-1 tvg-logo="https://raw.githubusercontent.com/iptv-org/iptv/master/snapshots/logos/france24.png" group-title="News",France 24 English
-https://static.france24.com/live/F24_EN_LO_HLS/live_tv.m3u8
-#EXTINF:-1 tvg-logo="https://raw.githubusercontent.com/iptv-org/iptv/master/snapshots/logos/dw.png" group-title="News",DW English Live
-https://dwamdstream102.akamaized.net/hls/live/2013187/dwstream102/index.m3u8
-#EXTINF:-1 tvg-logo="https://raw.githubusercontent.com/iptv-org/iptv/master/snapshots/logos/redbull.png" group-title="Sports",Red Bull TV
-https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8
-#EXTINF:-1 tvg-logo="https://raw.githubusercontent.com/iptv-org/iptv/master/snapshots/logos/deluxe-music.png" group-title="Music",Deluxe Music Germany
-https://deluxemusic.ebound.tv/live/deluxemusic/playlist.m3u8
-`;
 
 export const IPTVPlayer: React.FC = () => {
   const [playlistUrl, setPlaylistUrl] = useState('');
@@ -29,10 +15,11 @@ export const IPTVPlayer: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [corsError, setCorsError] = useState<{ url: string } | null>(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  
+  // URL Input for the empty landing page
+  const [landingUrlInput, setLandingUrlInput] = useState('');
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Load last playlist URL or demo on mount if saved
+  // Load last playlist URL or state on mount if saved
   useEffect(() => {
     const savedUrl = localStorage.getItem('neostream_last_url');
     const savedName = localStorage.getItem('neostream_playlist_name');
@@ -59,9 +46,14 @@ export const IPTVPlayer: React.FC = () => {
   }, []);
 
   const saveToLocalStorage = (url: string, name: string, list: IPTVChannel[]) => {
-    localStorage.setItem('neostream_last_url', url);
-    localStorage.setItem('neostream_playlist_name', name);
-    localStorage.setItem('neostream_channels', JSON.stringify(list));
+    try {
+      localStorage.setItem('neostream_last_url', url);
+      localStorage.setItem('neostream_playlist_name', name);
+      localStorage.setItem('neostream_channels', JSON.stringify(list));
+    } catch (e) {
+      console.warn('Playlist too large for localStorage quota. Skipping caching.', e);
+      localStorage.removeItem('neostream_channels');
+    }
   };
 
   const handleSelectChannel = (channel: IPTVChannel) => {
@@ -75,7 +67,6 @@ export const IPTVPlayer: React.FC = () => {
     setIsLoading(true);
     setCorsError(null);
     try {
-      // Direct client side fetch
       const response = await fetch(url);
       if (!response.ok) throw new Error('Network response was not ok');
       const text = await response.text();
@@ -101,47 +92,11 @@ export const IPTVPlayer: React.FC = () => {
     }
   };
 
-  const handleLoadDemoPlaylist = () => {
-    setIsLoading(true);
-    setCorsError(null);
-    setTimeout(() => {
-      const parsed = parseM3U(DEMO_PLAYLIST_M3U);
-      setChannels(parsed);
-      setPlaylistUrl('');
-      setPlaylistName(DEMO_PLAYLIST_NAME);
-      saveToLocalStorage('', DEMO_PLAYLIST_NAME, parsed);
-      setActiveChannel(parsed[0]);
-      setIsLoading(false);
-    }, 400);
-  };
-
-  const handleLocalFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsLoading(true);
-    setCorsError(null);
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      const parsed = parseM3U(text);
-      if (parsed.length === 0) {
-        alert("No streaming channels found inside this file.");
-      } else {
-        setChannels(parsed);
-        setPlaylistUrl('');
-        setPlaylistName(file.name);
-        saveToLocalStorage('', file.name, parsed);
-        setActiveChannel(parsed[0]);
-      }
-      setIsLoading(false);
-    };
-    reader.onerror = () => {
-      alert("Error reading file");
-      setIsLoading(false);
-    };
-    reader.readAsText(file);
+  const handleLandingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (landingUrlInput.trim()) {
+      handleFetchPlaylist(landingUrlInput.trim());
+    }
   };
 
   const handleClearPlaylist = () => {
@@ -149,6 +104,7 @@ export const IPTVPlayer: React.FC = () => {
     setActiveChannel(null);
     setPlaylistUrl('');
     setPlaylistName('');
+    setLandingUrlInput('');
     localStorage.removeItem('neostream_last_url');
     localStorage.removeItem('neostream_playlist_name');
     localStorage.removeItem('neostream_channels');
@@ -158,15 +114,16 @@ export const IPTVPlayer: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
       
-      {/* Top Header Bar */}
-      <PlaylistInput
-        onLoadPlaylist={handleFetchPlaylist}
-        onLoadDemoPlaylist={handleLoadDemoPlaylist}
-        onClearPlaylist={handleClearPlaylist}
-        isLoading={isLoading}
-        hasPlaylist={channels.length > 0}
-        currentUrl={playlistUrl}
-      />
+      {/* Top Header Bar (Only visible when playlist is loaded) */}
+      {channels.length > 0 && (
+        <PlaylistInput
+          onLoadPlaylist={handleFetchPlaylist}
+          onClearPlaylist={handleClearPlaylist}
+          isLoading={isLoading}
+          hasPlaylist={channels.length > 0}
+          currentUrl={playlistUrl}
+        />
+      )}
 
       {/* Main Content Pane */}
       <div className="flex-1 flex flex-col md:flex-row relative overflow-hidden">
@@ -189,7 +146,7 @@ export const IPTVPlayer: React.FC = () => {
               {/* Mobile Drawer Trigger Bar */}
               <div className="md:hidden flex items-center justify-between bg-zinc-900 border border-zinc-800 p-3.5 rounded-xl mb-3">
                 <div className="flex items-center space-x-2.5 min-w-0">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping shrink-0" />
                   <span className="text-xs text-zinc-300 font-semibold truncate">
                     {activeChannel ? activeChannel.name : 'Select Channel'}
                   </span>
@@ -238,54 +195,92 @@ export const IPTVPlayer: React.FC = () => {
             )}
           </>
         ) : (
-          /* Empty Dashboard State (No Playlists loaded) */
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-2xl mx-auto space-y-6">
+          /* Professional Landing Screen (No Card, Full-Screen Integrated Dashboard layout) */
+          <div className="flex-1 flex flex-col justify-between w-full h-full bg-[#0a0a0c] relative px-6 py-12 md:py-20 select-none overflow-y-auto">
             
-            {/* Visual Glassmorphic Branding Icon Card */}
-            <div className="relative group">
-              <div className="absolute inset-0 bg-emerald-500/10 rounded-3xl blur-2xl group-hover:bg-emerald-500/15 transition-all duration-300" />
-              <div className="relative bg-zinc-900/60 border border-zinc-800 p-8 rounded-3xl shadow-xl flex items-center justify-center text-zinc-500 group-hover:text-emerald-400 group-hover:border-zinc-700/60 transition-all duration-300">
-                <Tv2 className="h-16 w-16 stroke-[1.2] animate-pulse" />
+            {/* Subtle background abstract lighting */}
+            <div className="absolute top-[20%] left-[50%] -translate-x-[50%] -translate-y-[50%] w-[500px] h-[500px] bg-red-600/[0.03] rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute bottom-[10%] left-[10%] w-[300px] h-[300px] bg-red-600/[0.01] rounded-full blur-[80px] pointer-events-none" />
+            
+            {/* Top Navigation Row */}
+            <div className="w-full max-w-4xl mx-auto flex items-center justify-between shrink-0">
+              <div className="flex items-center space-x-2.5">
+                <div className="bg-red-600/10 border border-red-600/25 p-2 rounded-lg text-red-500">
+                  <Tv2 className="h-5 w-5 stroke-[1.5]" />
+                </div>
+                <span className="text-sm font-bold tracking-wider text-zinc-200">
+                  NEOSTREAM <span className="text-red-500 font-semibold">IPTV</span>
+                </span>
+              </div>
+              <span className="text-[10px] uppercase font-mono tracking-widest text-zinc-500 border border-zinc-900 px-2.5 py-1 rounded-md">
+                v1.0.0
+              </span>
+            </div>
+
+            {/* Central Main Input Section */}
+            <div className="w-full max-w-2xl mx-auto flex flex-col items-center py-10 md:py-16 text-center space-y-8 shrink-0">
+              <div className="space-y-3">
+                <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent">
+                  Stream Live Television
+                </h2>
+                <p className="text-zinc-400 text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
+                  Enter an HTTP or HTTPS `.m3u` streaming playlist link below to parse channels and start playing instantly.
+                </p>
+              </div>
+
+              {/* URL Input Form integrated flat with the page */}
+              <form onSubmit={handleLandingSubmit} className="w-full space-y-4">
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4.5 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-red-500 transition-colors">
+                    <Link className="h-4.5 w-4.5" />
+                  </div>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://example.com/playlist.m3u"
+                    className="w-full bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700/60 rounded-2xl pl-12 pr-4.5 py-4 text-sm text-zinc-100 placeholder-zinc-650 focus:outline-none focus:border-red-600/40 focus:ring-1 focus:ring-red-600/20 transition-all duration-200"
+                    value={landingUrlInput}
+                    onChange={(e) => setLandingUrlInput(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                {isLoading ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full bg-red-600/40 border border-red-600/10 text-white rounded-2xl py-4 text-sm font-semibold flex items-center justify-center gap-2.5 cursor-wait"
+                  >
+                    <RefreshCw className="h-4.5 w-4.5 animate-spin text-red-200" />
+                    Fetching channels from playlist...
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={!landingUrlInput.trim()}
+                    className="w-full bg-[#E50914] hover:bg-[#F40B17] text-white disabled:bg-zinc-900/50 disabled:text-zinc-600 disabled:border-transparent rounded-2xl py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all duration-250 cursor-pointer shadow-xl"
+                  >
+                    <Download className="h-4.5 w-4.5" />
+                    Connect & Stream
+                  </button>
+                )}
+              </form>
+
+              {/* Minimal Help info label */}
+              <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
+                Supports standard HLS/M3U8 audio & video feeds
               </div>
             </div>
 
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-white">Stream Your IPTV Playlists</h2>
-              <p className="text-zinc-400 text-xs mt-2 max-w-md leading-relaxed">
-                Connect external playlists via M3U URLs, import local `.m3u` files directly, or test immediately using our pre-packaged public channels.
-              </p>
+            {/* Bottom Footer Info */}
+            <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] text-zinc-600 shrink-0 border-t border-zinc-900/50 pt-8">
+              <span>© {new Date().getFullYear()} Neostream Player. All rights reserved.</span>
+              <div className="flex items-center space-x-4">
+                <span className="hover:text-zinc-500 transition-colors">CORS compliant stream input required</span>
+              </div>
             </div>
 
-            {/* Quick action grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
-              {/* Local file import card */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-850 hover:border-zinc-700 p-4.5 rounded-2xl flex flex-col items-center text-center transition-all duration-200 group cursor-pointer"
-              >
-                <FileUp className="h-5 w-5 text-emerald-400 mb-2 group-hover:scale-108 transition-transform" />
-                <span className="text-xs font-bold text-zinc-200">Load M3U Local File</span>
-                <span className="text-[10px] text-zinc-500 mt-1">Reads directly in browser (Bypasses CORS)</span>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".m3u,.m3u8,text/plain"
-                onChange={handleLocalFileSelect}
-                className="hidden"
-              />
-
-              {/* Demo quick start card */}
-              <button
-                onClick={handleLoadDemoPlaylist}
-                className="bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-850 hover:border-zinc-700 p-4.5 rounded-2xl flex flex-col items-center text-center transition-all duration-200 group cursor-pointer"
-              >
-                <Radio className="h-5 w-5 text-emerald-400 mb-2 group-hover:scale-108 transition-transform" />
-                <span className="text-xs font-bold text-zinc-200">Load Demo Streams</span>
-                <span className="text-[10px] text-zinc-500 mt-1">Test using high-quality CORS-ready streams</span>
-              </button>
-            </div>
-            
           </div>
         )}
 
@@ -293,61 +288,46 @@ export const IPTVPlayer: React.FC = () => {
 
       {/* Resilient CORS Info Modal */}
       {corsError && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-md w-full shadow-2xl p-6 relative overflow-hidden animate-slide-up">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-zinc-950 border border-zinc-900 rounded-3xl max-w-md w-full shadow-2xl p-6 relative overflow-hidden animate-slide-up">
             
-            {/* Red Alert warning bar decoration */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
             
             <button
               onClick={() => setCorsError(null)}
-              className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 p-1 rounded-lg border border-zinc-850 hover:border-zinc-800 bg-zinc-950/20"
+              className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 p-1.5 rounded-lg border border-zinc-900 bg-zinc-900/30"
             >
               <X className="h-4 w-4" />
             </button>
 
             <div className="flex items-center gap-3.5 mb-4">
               <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-2.5 rounded-xl">
-                <AlertTriangle className="h-6 w-6" />
+                <AlertTriangle className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-bold text-white text-base">CORS Block Blocked Connection</h3>
-                <p className="text-[10px] text-zinc-500">Resource Sharing Restriction</p>
+                <h3 className="font-bold text-white text-sm">CORS Security Block</h3>
+                <p className="text-[10px] text-zinc-500">Cross-Origin Resource Sharing Error</p>
               </div>
             </div>
 
-            <div className="text-xs text-zinc-300 space-y-3.5 leading-relaxed bg-zinc-950/50 p-4 rounded-2xl border border-zinc-850">
+            <div className="text-xs text-zinc-400 space-y-3.5 leading-relaxed bg-zinc-900/20 p-4.5 rounded-2xl border border-zinc-900">
               <p>
-                Browsers prevent fetching files from external domains that lack open CORS permissions headers.
+                The browser could not load the playlist because the remote server lacks CORS headers (`Access-Control-Allow-Origin`).
               </p>
-              <div className="text-[10px] text-zinc-500 font-mono truncate bg-zinc-950 border border-zinc-900 p-2.5 rounded-lg">
-                Blocked: {corsError.url}
+              <div className="text-[9px] text-zinc-500 font-mono truncate bg-black/50 border border-zinc-900 p-2 rounded-lg">
+                Url: {corsError.url}
               </div>
-              <p className="text-zinc-400">
-                To play this playlist, you can download the <span className="font-semibold text-zinc-300">.m3u</span> file to your disk and load it via the local file loader button.
+              <p>
+                To resolve this issue, use a CORS proxy or request that the playlist administrator enables cross-origin requests.
               </p>
             </div>
 
-            <div className="mt-6 flex flex-col sm:flex-row gap-2.5">
+            <div className="mt-5">
               <button
-                onClick={() => {
-                  setCorsError(null);
-                  fileInputRef.current?.click();
-                }}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs py-2.5 rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2"
+                onClick={() => setCorsError(null)}
+                className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 font-semibold text-xs py-3 rounded-xl cursor-pointer transition-all"
               >
-                <FileUp className="h-4 w-4" />
-                Upload Local File
-              </button>
-              
-              <button
-                onClick={() => {
-                  setCorsError(null);
-                  handleLoadDemoPlaylist();
-                }}
-                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-750 font-semibold text-xs py-2.5 rounded-xl cursor-pointer transition-all"
-              >
-                Load Demo List
+                Go Back
               </button>
             </div>
 

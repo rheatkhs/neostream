@@ -34,7 +34,7 @@
 /* Custom Scrollbar utility */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(39, 39, 42, 0.6) rgba(9, 9, 11, 0.4);
+  scrollbar-color: rgba(64, 64, 64, 0.6) rgba(0, 0, 0, 0.4);
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -43,17 +43,17 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(9, 9, 11, 0.4);
+  background: rgba(0, 0, 0, 0.4);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(39, 39, 42, 0.6);
+  background: rgba(64, 64, 64, 0.6);
   border-radius: 9999px;
   transition: background 0.2s;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(16, 185, 129, 0.4);
+  background: rgba(229, 9, 20, 0.4); /* Netflix Red */
 }
 
 /* Resets for the scaffolding structure */
@@ -67,7 +67,7 @@ body,
   height: 100% !important;
   min-height: 100% !important;
   overflow: hidden;
-  background-color: #09090b; /* zinc-950 */
+  background-color: #000000; /* Netflix deep black */
   border-inline: none !important;
   text-align: left !important;
 }

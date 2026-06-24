@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Search, Tv, Play } from 'lucide-react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { Search, Tv, Play, Folder, ChevronDown } from 'lucide-react';
 import type { IPTVChannel } from '../utils/m3uParser';
 
 interface SidebarProps {
@@ -17,6 +17,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Virtualized Scroll State
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
 
   // Extract all unique categories
   const categories = useMemo(() => {
@@ -38,6 +43,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
     });
   }, [channels, searchTerm, selectedCategory]);
 
+  // Reset scroll position on filter/search change
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = 0;
+    }
+    setScrollTop(0);
+  }, [searchTerm, selectedCategory]);
+
+  // Virtualization Calculations
+  const itemHeight = 58; // constant height in pixels
+  const buffer = 15;     // buffer items rendered above and below viewport
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  };
+
+  const clientHeight = containerRef.current ? containerRef.current.clientHeight : 800;
+  
+  const startIndex = Math.floor(scrollTop / itemHeight);
+  const endIndex = Math.ceil((scrollTop + clientHeight) / itemHeight);
+
+  const offsetStart = Math.max(0, startIndex - buffer);
+  const offsetEnd = Math.min(filteredChannels.length, endIndex + buffer);
+
+  const visibleChannels = useMemo(() => {
+    return filteredChannels.slice(offsetStart, offsetEnd);
+  }, [filteredChannels, offsetStart, offsetEnd]);
+
+  const paddingTop = offsetStart * itemHeight;
+  const paddingBottom = Math.max(0, (filteredChannels.length - offsetEnd) * itemHeight);
+
   return (
     <div className="w-full h-full flex flex-col bg-zinc-950 border-r border-zinc-800/80">
       
@@ -49,20 +85,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="truncate pr-2 font-medium" title={playlistName}>
             Source: <span className="text-zinc-300 font-semibold">{playlistName}</span>
           </span>
-          <span className="shrink-0 bg-zinc-900 border border-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full font-mono">
+          <span className="shrink-0 bg-zinc-900 border border-zinc-800 text-zinc-405 px-2 py-0.5 rounded-full font-mono">
             {filteredChannels.length} / {channels.length}
           </span>
         </div>
 
         {/* Search input field */}
         <div className="relative group">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-emerald-400 transition-colors">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-red-500 transition-colors">
             <Search className="h-4 w-4" />
           </div>
           <input
             type="text"
             placeholder="Search channels..."
-            className="w-full bg-zinc-900/60 border border-zinc-800 rounded-lg pl-9 pr-8 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+            className="w-full bg-zinc-900/60 border border-zinc-800 rounded-lg pl-9 pr-8 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-600/40 focus:ring-1 focus:ring-red-600/20 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -79,99 +115,125 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Category list filters */}
         {categories.length > 2 && (
           <div className="relative w-full">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-zinc-900/40 border border-zinc-800 text-xs text-zinc-300 rounded-lg p-2 focus:outline-none focus:border-emerald-500/30 cursor-pointer appearance-none"
+            <button
+              type="button"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="w-full flex items-center justify-between bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 rounded-lg p-2.5 transition-colors cursor-pointer"
             >
-              {categories.map((category) => (
-                <option key={category} value={category} className="bg-zinc-950 text-zinc-300">
-                  📂 {category}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-zinc-500">
-              <svg className="fill-current h-4 w-4" viewBox="0 0 20 20">
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-              </svg>
-            </div>
+              <div className="flex items-center gap-2 min-w-0">
+                <Folder className="h-4 w-4 text-red-500 shrink-0" />
+                <span className="truncate">{selectedCategory === 'All' ? 'All Categories' : selectedCategory}</span>
+              </div>
+              <ChevronDown className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
+            </button>
+
+            {isDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
+                <div className="absolute left-0 right-0 mt-1.5 max-h-60 overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl z-50 custom-scrollbar animate-fade-in">
+                  {categories.map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(category);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2.5 text-left text-xs hover:bg-zinc-855 transition-colors ${
+                        selectedCategory === category ? 'text-red-400 font-bold bg-zinc-800/40' : 'text-zinc-400'
+                      }`}
+                    >
+                      <Folder className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
+                      <span className="truncate">{category}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
 
-      {/* Channel list viewport */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+      {/* Virtualized Channel list viewport */}
+      <div 
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto custom-scrollbar p-2"
+      >
         {filteredChannels.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             <Tv className="h-10 w-10 text-zinc-700 stroke-[1.5] mb-2 animate-pulse" />
             <p className="text-zinc-500 text-xs">No channels found matching filters</p>
           </div>
         ) : (
-          filteredChannels.map((channel) => {
-            const isActive = activeChannel?.id === channel.id;
-            return (
-              <button
-                key={channel.id}
-                onClick={() => onSelectChannel(channel)}
-                className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all duration-200 group relative border ${
-                  isActive
-                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.05)]'
-                    : 'bg-zinc-950/30 border-transparent hover:bg-zinc-900/40 hover:border-zinc-800 text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                {/* Visual Glow Indicator (active only) */}
-                {isActive && (
-                  <span className="absolute left-0 top-3 bottom-3 w-1 bg-emerald-500 rounded-r-md" />
-                )}
-
-                {/* Channel Icon or Fallback Tv */}
-                <div className="relative shrink-0 w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center overflow-hidden transition-all group-hover:scale-102 group-hover:border-zinc-700/80">
-                  {channel.logo ? (
-                    <img
-                      src={channel.logo}
-                      alt={channel.name}
-                      loading="lazy"
-                      className="w-full h-full object-contain p-1"
-                      onError={(e) => {
-                        // Fallback to text initials or default icon
-                        (e.target as HTMLImageElement).style.display = 'none';
-                        const parent = (e.target as HTMLImageElement).parentNode as HTMLElement;
-                        if (parent) {
-                          const iconHtml = `<svg class="h-5 w-5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>`;
-                          parent.innerHTML = iconHtml;
-                        }
-                      }}
-                    />
-                  ) : (
-                    <Tv className="h-5 w-5 text-zinc-600 transition-colors group-hover:text-zinc-400" />
+          <div style={{ paddingTop, paddingBottom }} className="space-y-1">
+            {visibleChannels.map((channel) => {
+              const isActive = activeChannel?.id === channel.id;
+              
+              return (
+                <button
+                  key={channel.id}
+                  onClick={() => onSelectChannel(channel)}
+                  style={{ height: `${itemHeight}px` }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group relative border shrink-0 overflow-hidden ${
+                    isActive
+                      ? 'bg-red-600/10 border-red-600/40 text-red-400 shadow-[0_0_15px_rgba(229,9,20,0.05)]'
+                      : 'bg-zinc-950/30 border-transparent hover:bg-zinc-900/40 hover:border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  {/* Visual Glow Indicator (active only) */}
+                  {isActive && (
+                    <span className="absolute left-0 top-3.5 bottom-3.5 w-1 bg-red-600/80 rounded-r-md" />
                   )}
-                </div>
 
-                {/* Title & Metadata Details */}
-                <div className="flex-1 min-w-0">
-                  <h3 className={`text-xs font-semibold truncate ${isActive ? 'text-emerald-300' : 'text-zinc-300 group-hover:text-white'}`}>
-                    {channel.name}
-                  </h3>
-                  <span className="text-[10px] text-zinc-500 font-medium truncate block mt-0.5">
-                    {channel.group || 'General'}
-                  </span>
-                </div>
+                  {/* Channel Icon or Fallback Tv */}
+                  <div className="relative shrink-0 w-9 h-9 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center overflow-hidden transition-all group-hover:scale-102 group-hover:border-zinc-700/80">
+                    {channel.logo ? (
+                      <img
+                        src={channel.logo}
+                        alt={channel.name}
+                        loading="lazy"
+                        className="w-full h-full object-contain p-1"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          const parent = (e.target as HTMLImageElement).parentNode as HTMLElement;
+                          if (parent) {
+                            const iconHtml = `<svg class="h-4.5 w-4.5 text-zinc-650" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>`;
+                            parent.innerHTML = iconHtml;
+                          }
+                        }}
+                      />
+                    ) : (
+                      <Tv className="h-4.5 w-4.5 text-zinc-600 transition-colors group-hover:text-zinc-400" />
+                    )}
+                  </div>
 
-                {/* Active Playing Equalizer Animation or Hover Play icon */}
-                <div className="shrink-0 flex items-center justify-center w-6 h-6">
-                  {isActive ? (
-                    <div className="flex items-end gap-0.5 h-3.5 w-3.5">
-                      <span className="w-0.5 bg-emerald-400 rounded-full animate-equalizer-1" style={{ height: '60%' }} />
-                      <span className="w-0.5 bg-emerald-400 rounded-full animate-equalizer-2" style={{ height: '100%' }} />
-                      <span className="w-0.5 bg-emerald-400 rounded-full animate-equalizer-3" style={{ height: '40%' }} />
-                    </div>
-                  ) : (
-                    <Play className="h-3 w-3 text-zinc-600 opacity-0 group-hover:opacity-100 transform translate-x-1 group-hover:translate-x-0 transition-all duration-200 fill-zinc-600" />
-                  )}
-                </div>
-              </button>
-            );
-          })
+                  {/* Title & Metadata Details */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`text-xs font-semibold truncate ${isActive ? 'text-red-400 font-bold' : 'text-zinc-300 group-hover:text-white'}`}>
+                      {channel.name}
+                    </h3>
+                    <span className="text-[10px] text-zinc-500 font-medium truncate block mt-0.5">
+                      {channel.group || 'General'}
+                    </span>
+                  </div>
+
+                  {/* Active Playing Equalizer Animation or Hover Play icon */}
+                  <div className="shrink-0 flex items-center justify-center w-6 h-6">
+                    {isActive ? (
+                      <div className="flex items-end gap-0.5 h-3.5 w-3.5">
+                        <span className="w-0.5 bg-red-500 rounded-full animate-equalizer-1" style={{ height: '60%' }} />
+                        <span className="w-0.5 bg-red-500 rounded-full animate-equalizer-2" style={{ height: '100%' }} />
+                        <span className="w-0.5 bg-red-500 rounded-full animate-equalizer-3" style={{ height: '40%' }} />
+                      </div>
+                    ) : (
+                      <Play className="h-3 w-3 text-zinc-600 opacity-0 group-hover:opacity-100 transform translate-x-1 group-hover:translate-x-0 transition-all duration-200 fill-zinc-600" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

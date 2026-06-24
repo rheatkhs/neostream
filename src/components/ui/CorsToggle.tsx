@@ -20,7 +20,7 @@ export const CorsToggle: React.FC<CorsToggleProps> = ({
   return (
     <div className={`flex items-center justify-between bg-black/40 border border-white/5 ${rounded} ${padding} text-left transition-all`}>
       <div className="flex flex-col pr-4">
-        <span className={`${titleSize} font-bold text-zinc-350`}>Use CORS Proxy server</span>
+        <span className={`${titleSize} font-bold text-zinc-300`}>Use CORS Proxy server</span>
         <span className={`${descSize} text-zinc-500 leading-relaxed mt-0.5 font-semibold`}>
           Bypasses browser stream connection blockages using corsproxy.io.
         </span>

@@ -60,7 +60,7 @@ export const LandingPage: React.FC = () => {
             <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white uppercase bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent">
               Connect Playlist
             </h2>
-            <p className="text-zinc-450 text-xs md:text-sm max-w-lg mx-auto leading-relaxed font-semibold">
+            <p className="text-zinc-500 text-xs md:text-sm max-w-lg mx-auto leading-relaxed font-semibold">
               Paste an M3U playlist link to start playing live television streams instantly.
             </p>
           </div>

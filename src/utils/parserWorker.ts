@@ -26,7 +26,8 @@ const workerCode = `
             const logo = logoMatch ? logoMatch[1] : '';
             
             const groupMatch = line.match(/group-title="([^"]+)"/i);
-            const group = groupMatch ? groupMatch[1] : '';
+            const rawGroup = groupMatch ? groupMatch[1].trim() : '';
+            const group = rawGroup ? rawGroup.replace(/;/g, ',') : 'Others';
             
             const tvgIdMatch = line.match(/tvg-id="([^"]+)"/i);
             const tvgId = tvgIdMatch ? tvgIdMatch[1] : '';

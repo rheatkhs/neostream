@@ -67,12 +67,18 @@ export function parseM3U(content: string): ParsedM3U {
       if (currentInfo) {
         // Only accept http/https streaming urls
         if (line.startsWith('http://') || line.startsWith('https://')) {
+          // Normalize group name: replace semicolons with commas, default empty/undefined to "Others"
+          const rawGroup = currentInfo.group?.trim();
+          const normalizedGroup = rawGroup
+            ? rawGroup.replace(/;/g, ',')
+            : 'Others';
+
           channels.push({
             id: String(channels.length),
             name: currentInfo.name || 'Unnamed Channel',
             logo: currentInfo.logo,
             url: line,
-            group: currentInfo.group || 'General',
+            group: normalizedGroup,
             tvgId: currentInfo.tvgId,
           });
         }

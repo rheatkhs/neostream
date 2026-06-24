@@ -617,7 +617,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Welcome Screen Placeholder */}
       {!channel && (
-        <div className="text-center p-8 flex flex-col items-center justify-center max-w-md animate-fade-in relative z-10">
+        <div className="absolute inset-0 text-center p-8 flex flex-col items-center justify-center max-w-md mx-auto animate-fade-in z-10">
           <div className="w-16 h-16 bg-red-650/10 rounded-2xl flex items-center justify-center border border-red-650/20 mb-6 shadow-[0_0_50px_rgba(229,9,20,0.15)] animate-pulse">
             <Radio className="w-8 h-8 text-[#E50914]" />
           </div>

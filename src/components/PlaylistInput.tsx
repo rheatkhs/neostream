@@ -7,6 +7,10 @@ interface PlaylistInputProps {
   isLoading: boolean;
   hasPlaylist: boolean;
   currentUrl: string;
+  useCorsProxy: boolean;
+  setUseCorsProxy: (val: boolean) => void;
+  corsProxyUrl: string;
+  setCorsProxyUrl: (val: string) => void;
 }
 
 export const PlaylistInput: React.FC<PlaylistInputProps> = ({
@@ -15,6 +19,10 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
   isLoading,
   hasPlaylist,
   currentUrl,
+  useCorsProxy,
+  setUseCorsProxy,
+  corsProxyUrl,
+  setCorsProxyUrl,
 }) => {
   const [urlInput, setUrlInput] = useState(currentUrl);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -63,12 +71,17 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
 
           {/* Active Playlist metadata info */}
           {hasPlaylist && (
-            <div className="hidden md:flex items-center gap-2 bg-zinc-900/60 px-4 py-2 rounded-full border border-zinc-850/80 text-xs text-zinc-300">
+            <div className="hidden lg:flex items-center gap-3.5 bg-zinc-900/60 px-4 py-2 rounded-full border border-zinc-850/80 text-xs text-zinc-300">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
               <span className="font-semibold text-zinc-200">Active source:</span>
               <span className="truncate max-w-[200px] text-zinc-400" title={currentUrl}>
                 {getCleanPlaylistName(currentUrl)}
               </span>
+              {useCorsProxy && (
+                <span className="ml-1 bg-red-950/45 border border-red-600/20 text-red-400 text-[10px] px-2 py-0.5 rounded-md font-semibold select-none">
+                  PROXY ACTIVE
+                </span>
+              )}
             </div>
           )}
 
@@ -107,10 +120,10 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
               <div className="absolute right-0 top-full mt-2 w-72 bg-zinc-950/95 border border-zinc-900 text-zinc-400 text-xs p-3.5 rounded-xl shadow-2xl invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-50">
                 <h4 className="font-semibold text-white mb-1">CORS & Playlist Info</h4>
                 <p className="mb-2 leading-relaxed">
-                  Many IPTV links fail to load in browser players due to <span className="text-amber-500 font-medium">CORS restrictions</span>.
+                  Many IPTV links fail to load in browser players due to <span className="text-[#E50914] font-semibold">CORS restrictions</span>.
                 </p>
                 <p className="leading-relaxed">
-                  Make sure the host allows cross-origin requests, or use a CORS proxy to bypass server limitations.
+                  Make sure to enable the integrated CORS Proxy (corsproxy.io) to bypass server security boundaries.
                 </p>
               </div>
             </div>
@@ -133,7 +146,7 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
               <h3 className="text-sm font-bold tracking-wider text-zinc-200 uppercase">Change Playlist Source</h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-zinc-500 hover:text-zinc-300 text-xs font-semibold px-2 py-1 rounded border border-zinc-900 hover:bg-zinc-900"
+                className="text-zinc-550 hover:text-zinc-350 text-xs font-semibold px-2 py-1 rounded border border-zinc-900 hover:bg-zinc-900"
               >
                 Cancel
               </button>
@@ -145,19 +158,52 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-red-500 transition-colors">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-550 group-focus-within:text-red-500 transition-colors">
                   <Link className="h-4.5 w-4.5" />
                 </div>
                 <input
                   type="url"
                   required
                   placeholder="https://example.com/playlist.m3u"
-                  className="w-full bg-zinc-900/40 border border-zinc-800/80 rounded-xl pl-10 pr-4 py-3 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-600/40 focus:ring-1 focus:ring-red-600/20 transition-all"
+                  className="w-full bg-zinc-900/40 border border-zinc-800/80 rounded-xl pl-10 pr-4 py-3 text-xs text-zinc-100 placeholder-zinc-550 focus:outline-none focus:border-red-600/40 focus:ring-1 focus:ring-red-600/20 transition-all"
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
                   disabled={isLoading}
                 />
               </div>
+
+              {/* CORS Proxy Toggle */}
+              <div className="flex items-center justify-between bg-zinc-900/35 border border-zinc-900 rounded-xl p-3.5 text-left">
+                <div className="flex flex-col pr-4">
+                  <span className="text-xs font-bold text-zinc-350">Use CORS Proxy server</span>
+                  <span className="text-[10px] text-zinc-550 leading-relaxed mt-0.5">
+                    Bypasses browser stream connection blockages using corsproxy.io.
+                  </span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer select-none">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    checked={useCorsProxy}
+                    onChange={(e) => setUseCorsProxy(e.target.checked)}
+                  />
+                  <div className="w-9 h-5 bg-zinc-900 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-500 peer-checked:after:bg-white after:border-transparent after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#E50914]" />
+                </label>
+              </div>
+
+              {useCorsProxy && (
+                <div className="space-y-1.5 p-3.5 bg-zinc-900/25 border border-zinc-900 rounded-xl animate-fade-in text-left">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Custom Proxy Server URL</label>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://corsproxy.io/?"
+                    className="w-full bg-zinc-950/60 border border-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-300 placeholder-zinc-650 focus:outline-none focus:border-red-655/40 transition-all"
+                    value={corsProxyUrl}
+                    onChange={(e) => setCorsProxyUrl(e.target.value)}
+                  />
+                </div>
+              )}
 
               {isLoading ? (
                 <button

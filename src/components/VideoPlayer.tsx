@@ -5,9 +5,11 @@ import type { IPTVChannel } from '../utils/m3uParser';
 
 interface VideoPlayerProps {
   channel: IPTVChannel | null;
+  useCorsProxy: boolean;
+  corsProxyUrl: string;
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel }) => {
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel, useCorsProxy, corsProxyUrl }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
 
@@ -37,6 +39,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel }) => {
       hlsRef.current = null;
     }
 
+    const finalUrl = useCorsProxy ? `${corsProxyUrl}${url}` : url;
+
     if (Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
@@ -46,7 +50,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel }) => {
       });
 
       hlsRef.current = hls;
-      hls.loadSource(url);
+      hls.loadSource(finalUrl);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -69,7 +73,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel }) => {
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Native Safari support
-      video.src = url;
+      video.src = finalUrl;
       video.addEventListener('loadedmetadata', () => {
         setIsLoading(false);
         video.play()
@@ -87,7 +91,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel }) => {
     }
   };
 
-  // Trigger stream loading on channel change
+  // Trigger stream loading on channel change or proxy configurations toggle
   useEffect(() => {
     if (channel?.url) {
       loadStream(channel.url);
@@ -104,7 +108,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel }) => {
       setIsLoading(false);
       setIsPlaying(false);
     }
-  }, [channel]);
+  }, [channel, useCorsProxy, corsProxyUrl]);
 
   // Handle volume changes
   useEffect(() => {

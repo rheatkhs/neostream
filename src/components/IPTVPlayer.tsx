@@ -19,6 +19,23 @@ export const IPTVPlayer: React.FC = () => {
   // URL Input for the empty landing page
   const [landingUrlInput, setLandingUrlInput] = useState('');
 
+  // CORS Proxy States
+  const [useCorsProxy, setUseCorsProxy] = useState<boolean>(() => {
+    return localStorage.getItem('neostream_use_cors_proxy') === 'true';
+  });
+  const [corsProxyUrl, setCorsProxyUrl] = useState<string>(() => {
+    return localStorage.getItem('neostream_cors_proxy_url') || 'https://corsproxy.io/?';
+  });
+
+  // Save proxy configurations to local storage on changes
+  useEffect(() => {
+    localStorage.setItem('neostream_use_cors_proxy', String(useCorsProxy));
+  }, [useCorsProxy]);
+
+  useEffect(() => {
+    localStorage.setItem('neostream_cors_proxy_url', corsProxyUrl);
+  }, [corsProxyUrl]);
+
   // Load last playlist URL or state on mount if saved
   useEffect(() => {
     const savedUrl = localStorage.getItem('neostream_last_url');
@@ -59,15 +76,17 @@ export const IPTVPlayer: React.FC = () => {
   const handleSelectChannel = (channel: IPTVChannel) => {
     setActiveChannel(channel);
     localStorage.setItem('neostream_active_channel_id', channel.id);
-    // Close mobile drawer on stream select
     setMobileDrawerOpen(false);
   };
 
-  const handleFetchPlaylist = async (url: string) => {
+  const handleFetchPlaylist = async (url: string, forceProxyState?: boolean) => {
     setIsLoading(true);
     setCorsError(null);
     try {
-      const response = await fetch(url);
+      const activeProxy = forceProxyState !== undefined ? forceProxyState : useCorsProxy;
+      const finalUrl = activeProxy ? `${corsProxyUrl}${url}` : url;
+      
+      const response = await fetch(finalUrl);
       if (!response.ok) throw new Error('Network response was not ok');
       const text = await response.text();
       const parsed = parseM3U(text);
@@ -80,7 +99,7 @@ export const IPTVPlayer: React.FC = () => {
         const name = url.substring(url.lastIndexOf('/') + 1) || 'IPTV Playlist';
         setPlaylistName(name);
         saveToLocalStorage(url, name, parsed);
-        // Do not auto-play first channel; display clean welcome screen instead
+        // Clean welcome state on new playlist fetch
         setActiveChannel(null);
       }
     } catch (error) {
@@ -122,6 +141,10 @@ export const IPTVPlayer: React.FC = () => {
           isLoading={isLoading}
           hasPlaylist={channels.length > 0}
           currentUrl={playlistUrl}
+          useCorsProxy={useCorsProxy}
+          setUseCorsProxy={setUseCorsProxy}
+          corsProxyUrl={corsProxyUrl}
+          setCorsProxyUrl={setCorsProxyUrl}
         />
       )}
 
@@ -146,7 +169,7 @@ export const IPTVPlayer: React.FC = () => {
               {/* Mobile Drawer Trigger Bar */}
               <div className="md:hidden flex items-center justify-between bg-zinc-900 border border-zinc-800 p-3.5 rounded-xl mb-3">
                 <div className="flex items-center space-x-2.5 min-w-0">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping shrink-0" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-650 animate-ping shrink-0" />
                   <span className="text-xs text-zinc-300 font-semibold truncate">
                     {activeChannel ? activeChannel.name : 'Select Channel'}
                   </span>
@@ -162,7 +185,11 @@ export const IPTVPlayer: React.FC = () => {
 
               {/* HLS Video Display */}
               <div className="flex-1 relative rounded-2xl overflow-hidden shadow-2xl border border-zinc-900">
-                <VideoPlayer channel={activeChannel} />
+                <VideoPlayer 
+                  channel={activeChannel} 
+                  useCorsProxy={useCorsProxy}
+                  corsProxyUrl={corsProxyUrl}
+                />
               </div>
             </div>
 
@@ -199,8 +226,8 @@ export const IPTVPlayer: React.FC = () => {
           <div className="flex-1 flex flex-col justify-between w-full h-full bg-[#0a0a0c] relative px-6 py-12 md:py-20 select-none overflow-y-auto">
             
             {/* Subtle background abstract lighting */}
-            <div className="absolute top-[20%] left-[50%] -translate-x-[50%] -translate-y-[50%] w-[500px] h-[500px] bg-red-600/[0.03] rounded-full blur-[100px] pointer-events-none" />
-            <div className="absolute bottom-[10%] left-[10%] w-[300px] h-[300px] bg-red-600/[0.01] rounded-full blur-[80px] pointer-events-none" />
+            <div className="absolute top-[20%] left-[50%] -translate-x-[50%] -translate-y-[50%] w-[500px] h-[500px] bg-red-650/[0.03] rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute bottom-[10%] left-[10%] w-[300px] h-[300px] bg-red-650/[0.01] rounded-full blur-[80px] pointer-events-none" />
             
             {/* Top Navigation Row */}
             <div className="w-full max-w-4xl mx-auto flex items-center justify-between shrink-0">
@@ -245,6 +272,25 @@ export const IPTVPlayer: React.FC = () => {
                   />
                 </div>
 
+                {/* CORS Proxy toggle option */}
+                <div className="flex items-center justify-between bg-zinc-900/30 border border-zinc-900 rounded-xl p-3.5 text-left transition-all">
+                  <div className="flex flex-col pr-4">
+                    <span className="text-xs font-bold text-zinc-350">Use CORS Proxy server</span>
+                    <span className="text-[10px] text-zinc-550 leading-relaxed mt-0.5">
+                      Bypasses browser stream connection blockages using corsproxy.io.
+                    </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer select-none">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer"
+                      checked={useCorsProxy}
+                      onChange={(e) => setUseCorsProxy(e.target.checked)}
+                    />
+                    <div className="w-9 h-5 bg-zinc-900 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-500 peer-checked:after:bg-white after:border-transparent after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#E50914]" />
+                  </label>
+                </div>
+
                 {isLoading ? (
                   <button
                     type="button"
@@ -274,7 +320,7 @@ export const IPTVPlayer: React.FC = () => {
             </div>
 
             {/* Bottom Footer Info */}
-            <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] text-zinc-600 shrink-0 border-t border-zinc-900/50 pt-8">
+            <div className="w-full max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] text-zinc-650 shrink-0 border-t border-zinc-900/50 pt-8">
               <span>© {new Date().getFullYear()} Neostream Player. All rights reserved.</span>
               <div className="flex items-center space-x-4">
                 <span className="hover:text-zinc-500 transition-colors">CORS compliant stream input required</span>
@@ -295,7 +341,7 @@ export const IPTVPlayer: React.FC = () => {
             
             <button
               onClick={() => setCorsError(null)}
-              className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300 p-1.5 rounded-lg border border-zinc-900 bg-zinc-900/30"
+              className="absolute top-4 right-4 text-zinc-550 hover:text-zinc-350 p-1.5 rounded-lg border border-zinc-900 bg-zinc-900/30"
             >
               <X className="h-4 w-4" />
             </button>
@@ -318,14 +364,27 @@ export const IPTVPlayer: React.FC = () => {
                 Url: {corsError.url}
               </div>
               <p>
-                To resolve this issue, use a CORS proxy or request that the playlist administrator enables cross-origin requests.
+                To bypass this issue, you can load the stream through our integrated CORS proxy.
               </p>
             </div>
 
-            <div className="mt-5">
+            <div className="mt-5 flex flex-col gap-2">
+              {!useCorsProxy && (
+                <button
+                  onClick={() => {
+                    setUseCorsProxy(true);
+                    setCorsError(null);
+                    handleFetchPlaylist(corsError.url, true);
+                  }}
+                  className="w-full bg-[#E50914] hover:bg-[#B80710] text-white font-bold text-xs py-3 rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Enable Proxy & Retry
+                </button>
+              )}
               <button
                 onClick={() => setCorsError(null)}
-                className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 font-semibold text-xs py-3 rounded-xl cursor-pointer transition-all"
+                className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-semibold text-xs py-3 rounded-xl cursor-pointer transition-all"
               >
                 Go Back
               </button>
@@ -334,7 +393,7 @@ export const IPTVPlayer: React.FC = () => {
           </div>
         </div>
       )}
-      
+
     </div>
   );
 };

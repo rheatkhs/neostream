@@ -35,6 +35,9 @@ export const IPTVPlayer: React.FC = () => {
   const [epgData, setEpgData] = useState<EPGMap>({});
   const [isEpgLoading, setIsEpgLoading] = useState(false);
 
+  // Mini-Player layout state
+  const [isMiniPlayer, setIsMiniPlayer] = useState(false);
+
   // Save proxy configurations to local storage on changes
   useEffect(() => {
     localStorage.setItem('neostream_use_cors_proxy', String(useCorsProxy));
@@ -118,6 +121,7 @@ export const IPTVPlayer: React.FC = () => {
     setActiveChannel(channel);
     localStorage.setItem('neostream_active_channel_id', channel.id);
     setMobileDrawerOpen(false);
+    setIsMiniPlayer(false);
   };
 
   const handleFetchPlaylist = async (url: string, forceProxyState?: boolean) => {
@@ -176,6 +180,7 @@ export const IPTVPlayer: React.FC = () => {
     setLandingEpgInput('');
     setEpgUrl('');
     setEpgData({});
+    setIsMiniPlayer(false);
     localStorage.removeItem('neostream_last_url');
     localStorage.removeItem('neostream_playlist_name');
     localStorage.removeItem('neostream_channels');
@@ -241,14 +246,39 @@ export const IPTVPlayer: React.FC = () => {
               </div>
 
               {/* HLS Video Display */}
-              <div className="flex-1 relative rounded-2xl overflow-hidden shadow-2xl border border-zinc-900">
+              <div className={
+                isMiniPlayer
+                  ? "fixed bottom-6 right-6 w-80 md:w-96 aspect-video z-50 rounded-2xl border border-zinc-900 shadow-[0_20px_50px_rgba(0,0,0,0.85)] overflow-hidden transition-all duration-300 pointer-events-auto"
+                  : "flex-1 relative rounded-2xl overflow-hidden shadow-2xl border border-zinc-900"
+              }>
                 <VideoPlayer 
                   channel={activeChannel} 
                   useCorsProxy={useCorsProxy}
                   corsProxyUrl={corsProxyUrl}
                   epgData={epgData}
+                  isMiniPlayer={isMiniPlayer}
+                  setIsMiniPlayer={setIsMiniPlayer}
                 />
               </div>
+
+              {isMiniPlayer && (
+                <div className="flex-1 flex flex-col items-center justify-center bg-[#0a0a0c]/20 rounded-2xl border border-zinc-900/60 p-6 text-center select-none animate-fade-in">
+                  <div className="bg-zinc-950/85 border border-zinc-900/80 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-[#E50914]" />
+                    <Tv2 className="h-9 w-9 text-[#E50914] mb-3 mx-auto animate-pulse" />
+                    <h3 className="text-white font-bold text-sm">Mini-Player Active</h3>
+                    <p className="text-zinc-450 text-[11px] mt-1.5 leading-relaxed">
+                      Stream is currently playing in a floating dock. You can browse other categories or channels.
+                    </p>
+                    <button
+                      onClick={() => setIsMiniPlayer(false)}
+                      className="w-full bg-[#E50914] hover:bg-[#B80710] text-white font-bold text-xs py-2.5 rounded-xl mt-5 cursor-pointer transition-all shadow-lg"
+                    >
+                      Restore Main Viewport
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Mobile Channel Drawer sliding layer */}

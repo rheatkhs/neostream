@@ -1,6 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, RefreshCw, AlertCircle, Tv, Radio } from 'lucide-react';
+import { 
+  Play, 
+  Pause, 
+  Volume2, 
+  VolumeX, 
+  Maximize, 
+  Minimize, 
+  RefreshCw, 
+  AlertCircle, 
+  Tv, 
+  Radio, 
+  Sliders, 
+  ExternalLink, 
+  Minimize2, 
+  Maximize2 
+} from 'lucide-react';
 import type { IPTVChannel } from '../utils/m3uParser';
 import { getChannelPrograms, getCurrentProgram, getNextProgram } from '../utils/epgParser';
 import type { EPGMap } from '../utils/epgParser';
@@ -10,13 +25,17 @@ interface VideoPlayerProps {
   useCorsProxy: boolean;
   corsProxyUrl: string;
   epgData?: EPGMap;
+  isMiniPlayer: boolean;
+  setIsMiniPlayer: (val: boolean) => void;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
   channel, 
   useCorsProxy, 
   corsProxyUrl, 
-  epgData = {} 
+  epgData = {},
+  isMiniPlayer,
+  setIsMiniPlayer
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -29,6 +48,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(true);
+
+  // Video Fine-Tuning states
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<string>('contain');
+  const [brightness, setBrightness] = useState<number>(1);
+  const [contrast, setContrast] = useState<number>(1);
+  const [saturation, setSaturation] = useState<number>(1);
 
   const controlsTimeoutRef = useRef<number | null>(null);
 
@@ -169,7 +195,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
     setShowControls(true);
     controlsTimeoutRef.current = window.setTimeout(() => {
-      if (isPlaying) {
+      if (isPlaying && !isSettingsOpen) {
         setShowControls(false);
       }
     }, 3500);
@@ -184,7 +210,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => {
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
     };
-  }, [isPlaying]);
+  }, [isPlaying, isSettingsOpen]);
 
   const togglePlay = () => {
     const video = videoRef.current;
@@ -240,6 +266,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  // Native Picture-in-Picture Toggle
+  const handleTogglePip = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+    try {
+      if (document.pictureInPictureElement === video) {
+        await document.exitPictureInPicture();
+      } else if (document.pictureInPictureEnabled) {
+        await video.requestPictureInPicture();
+      } else {
+        alert('Picture-in-Picture is not supported or enabled in this browser.');
+      }
+    } catch (error) {
+      console.error('Error toggling native Picture-in-Picture:', error);
+    }
+    resetControlsTimeout();
+  };
+
   // Helper formats program start and stop times
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -265,7 +309,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Video Node */}
       <video
         ref={videoRef}
-        className="w-full h-full object-contain"
+        className="w-full h-full transition-all duration-300"
+        style={{
+          objectFit: aspectRatio as any,
+          filter: `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`
+        }}
         playsInline
       />
 
@@ -370,6 +418,107 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
+      {/* Fine-Tuning Drawer / Sliders Panel */}
+      {channel && showControls && isSettingsOpen && (
+        <div 
+          className="absolute bottom-16 right-4 w-72 bg-zinc-950/95 backdrop-blur-md border border-zinc-850 p-4 rounded-2xl shadow-2xl z-20 animate-slide-up flex flex-col gap-4 select-none pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
+            <h4 className="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
+              <Sliders className="h-3.5 w-3.5 text-red-550" />
+              Video Fine-Tuning
+            </h4>
+            <button
+              onClick={() => {
+                setAspectRatio('contain');
+                setBrightness(1);
+                setContrast(1);
+                setSaturation(1);
+              }}
+              className="text-[9px] font-bold text-red-500 hover:text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded transition-all cursor-pointer"
+            >
+              Reset All
+            </button>
+          </div>
+
+          {/* Aspect Ratio Buttons */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] text-zinc-400 font-semibold tracking-wider uppercase">Aspect Ratio</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {(['contain', 'fill', 'cover'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setAspectRatio(mode)}
+                  className={`text-[10px] font-bold py-1.5 rounded-lg border transition-all cursor-pointer ${
+                    aspectRatio === mode
+                      ? 'bg-red-950/30 border-red-650/40 text-red-500 shadow-sm font-extrabold'
+                      : 'bg-zinc-900/60 border-zinc-850 text-zinc-450 hover:text-zinc-200'
+                  }`}
+                >
+                  {mode === 'contain' ? 'Fit (16:9)' : mode === 'fill' ? 'Fill (Stretch)' : 'Zoom (Crop)'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color Correction Sliders */}
+          <div className="flex flex-col gap-3">
+            {/* Brightness */}
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between items-center text-[10px] text-zinc-400 font-medium">
+                <span>Brightness</span>
+                <span className="font-mono text-zinc-550">{Math.round(brightness * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="1.5"
+                step="0.05"
+                value={brightness}
+                onChange={(e) => setBrightness(parseFloat(e.target.value))}
+                className="w-full accent-red-650 h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            {/* Contrast */}
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between items-center text-[10px] text-zinc-400 font-medium">
+                <span>Contrast</span>
+                <span className="font-mono text-zinc-550">{Math.round(contrast * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="1.5"
+                step="0.05"
+                value={contrast}
+                onChange={(e) => setContrast(parseFloat(e.target.value))}
+                className="w-full accent-red-650 h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            {/* Saturation */}
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between items-center text-[10px] text-zinc-400 font-medium">
+                <span>Saturation</span>
+                <span className="font-mono text-zinc-550">{Math.round(saturation * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="1.5"
+                step="0.05"
+                value={saturation}
+                onChange={(e) => setSaturation(parseFloat(e.target.value))}
+                className="w-full accent-red-650 h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Media Controller Bar (overlay bottom) */}
       {channel && (
         <div 
@@ -420,8 +569,44 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               />
             </div>
 
-            {/* Screen layout buttons */}
-            <div>
+            {/* Screen Layout / Custom Settings controls */}
+            <div className="flex items-center gap-2">
+              {/* Fine Tuning settings toggle */}
+              <button
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                className={`border p-2.5 rounded-xl transition-all cursor-pointer ${
+                  isSettingsOpen 
+                    ? 'bg-red-950/20 border-red-600/40 text-red-500' 
+                    : 'bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-850 text-zinc-400 hover:text-zinc-200'
+                }`}
+                title="Video Fine-Tuning"
+              >
+                <Sliders className="h-4.5 w-4.5" />
+              </button>
+
+              {/* Native PIP trigger */}
+              <button
+                onClick={handleTogglePip}
+                className="bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-850 text-zinc-400 hover:text-zinc-200 p-2.5 rounded-xl transition-all cursor-pointer"
+                title="Picture-in-Picture"
+              >
+                <ExternalLink className="h-4.5 w-4.5" />
+              </button>
+
+              {/* Mini-player overlay toggle */}
+              <button
+                onClick={() => setIsMiniPlayer(!isMiniPlayer)}
+                className={`border p-2.5 rounded-xl transition-all cursor-pointer ${
+                  isMiniPlayer 
+                    ? 'bg-red-950/20 border-red-600/40 text-red-500 animate-pulse' 
+                    : 'bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-850 text-zinc-400 hover:text-zinc-200'
+                }`}
+                title={isMiniPlayer ? 'Restore Viewport' : 'Floating Mini Player'}
+              >
+                {isMiniPlayer ? <Maximize2 className="h-4.5 w-4.5" /> : <Minimize2 className="h-4.5 w-4.5" />}
+              </button>
+
+              {/* Standard Fullscreen Toggle */}
               <button
                 onClick={toggleFullscreen}
                 className="bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-850 text-zinc-400 hover:text-zinc-200 p-2.5 rounded-xl transition-all cursor-pointer"
@@ -450,15 +635,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <div className="mt-8 grid grid-cols-3 gap-3 w-full border-t border-zinc-900/80 pt-6">
             <div className="flex flex-col items-center">
               <span className="bg-zinc-900 px-2 py-1 rounded text-[10px] font-mono text-zinc-400 border border-zinc-850">SPACE</span>
-              <span className="text-[10px] text-zinc-500 mt-1.5">Play/Pause</span>
+              <span className="text-[10px] text-zinc-550 mt-1.5">Play/Pause</span>
             </div>
             <div className="flex flex-col items-center">
               <span className="bg-zinc-900 px-2 py-1 rounded text-[10px] font-mono text-zinc-400 border border-zinc-850">F KEY</span>
-              <span className="text-[10px] text-zinc-500 mt-1.5">Fullscreen</span>
+              <span className="text-[10px] text-zinc-555 mt-1.5">Fullscreen</span>
             </div>
             <div className="flex flex-col items-center">
               <span className="bg-zinc-900 px-2 py-1 rounded text-[10px] font-mono text-zinc-400 border border-zinc-850">M KEY</span>
-              <span className="text-[10px] text-zinc-500 mt-1.5">Mute Audio</span>
+              <span className="text-[10px] text-zinc-555 mt-1.5">Mute Audio</span>
             </div>
           </div>
         </div>

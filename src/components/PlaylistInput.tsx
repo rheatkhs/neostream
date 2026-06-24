@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, Download, RefreshCw, Trash2, HelpCircle, Film } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, Download, RefreshCw, Trash2, HelpCircle, Film, Radio } from 'lucide-react';
 
 interface PlaylistInputProps {
   onLoadPlaylist: (url: string) => void;
@@ -11,6 +11,9 @@ interface PlaylistInputProps {
   setUseCorsProxy: (val: boolean) => void;
   corsProxyUrl: string;
   setCorsProxyUrl: (val: string) => void;
+  onLoadEPG?: (url: string) => void;
+  currentEpgUrl?: string;
+  isEpgLoading?: boolean;
 }
 
 export const PlaylistInput: React.FC<PlaylistInputProps> = ({
@@ -23,20 +26,33 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
   setUseCorsProxy,
   corsProxyUrl,
   setCorsProxyUrl,
+  onLoadEPG,
+  currentEpgUrl,
+  isEpgLoading = false,
 }) => {
   const [urlInput, setUrlInput] = useState(currentUrl);
+  const [epgInput, setEpgInput] = useState(currentEpgUrl || '');
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Sync state if prop changes externally
+  useEffect(() => {
+    setEpgInput(currentEpgUrl || '');
+  }, [currentEpgUrl]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (urlInput.trim()) {
       onLoadPlaylist(urlInput.trim());
+      if (onLoadEPG && epgInput.trim()) {
+        onLoadEPG(epgInput.trim());
+      }
       setIsModalOpen(false);
     }
   };
 
   const handleClear = () => {
     setUrlInput('');
+    setEpgInput('');
     onClearPlaylist();
   };
 
@@ -59,7 +75,7 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
           
           {/* Logo / Branding Section */}
           <div className="flex items-center space-x-3 select-none">
-            <div className="bg-red-650/10 border border-red-650/30 p-2.5 rounded-xl text-[#E50914] shadow-[0_0_15px_rgba(229,9,20,0.15)]">
+            <div className="bg-red-655/10 border border-red-650/30 p-2.5 rounded-xl text-[#E50914] shadow-[0_0_15px_rgba(229,9,20,0.15)]">
               <Film className="w-5 h-5" />
             </div>
             <div>
@@ -77,6 +93,16 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
               <span className="truncate max-w-[200px] text-zinc-400" title={currentUrl}>
                 {getCleanPlaylistName(currentUrl)}
               </span>
+              {currentEpgUrl && (
+                <span className="text-zinc-550 border-l border-zinc-800 pl-3 flex items-center gap-1">
+                  {isEpgLoading ? (
+                    <RefreshCw className="h-3 w-3 text-red-500 animate-spin shrink-0" />
+                  ) : (
+                    <Radio className="h-3 w-3 text-red-500 shrink-0" />
+                  )}
+                  {isEpgLoading ? 'EPG Loading...' : 'EPG Connected'}
+                </span>
+              )}
               {useCorsProxy && (
                 <span className="ml-1 bg-red-950/45 border border-red-600/20 text-red-400 text-[10px] px-2 py-0.5 rounded-md font-semibold select-none">
                   PROXY ACTIVE
@@ -146,17 +172,18 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
               <h3 className="text-sm font-bold tracking-wider text-zinc-200 uppercase">Change Playlist Source</h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-zinc-550 hover:text-zinc-350 text-xs font-semibold px-2 py-1 rounded border border-zinc-900 hover:bg-zinc-900"
+                className="text-zinc-555 hover:text-zinc-355 text-xs font-semibold px-2 py-1 rounded border border-zinc-900 hover:bg-zinc-900"
               >
                 Cancel
               </button>
             </div>
 
             <p className="text-xs text-zinc-400 mb-5 leading-relaxed">
-              Enter a new `.m3u` streaming playlist URL below. The current playlist will be cleared and the new channels parsed.
+              Enter a new `.m3u` streaming playlist URL and optional EPG guide URL below. The current items will be cleared.
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Playlist input field */}
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-550 group-focus-within:text-red-500 transition-colors">
                   <Link className="h-4.5 w-4.5" />
@@ -168,6 +195,21 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
                   className="w-full bg-zinc-900/40 border border-zinc-800/80 rounded-xl pl-10 pr-4 py-3 text-xs text-zinc-100 placeholder-zinc-550 focus:outline-none focus:border-red-600/40 focus:ring-1 focus:ring-red-600/20 transition-all"
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* EPG input field (optional) */}
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-550 group-focus-within:text-red-500 transition-colors">
+                  <Radio className="h-4 w-4" />
+                </div>
+                <input
+                  type="url"
+                  placeholder="Custom EPG XML URL (Optional)"
+                  className="w-full bg-zinc-900/40 border border-zinc-800/80 rounded-xl pl-10 pr-4 py-3 text-xs text-zinc-100 placeholder-zinc-550 focus:outline-none focus:border-red-600/40 focus:ring-1 focus:ring-red-600/20 transition-all"
+                  value={epgInput}
+                  onChange={(e) => setEpgInput(e.target.value)}
                   disabled={isLoading}
                 />
               </div>
@@ -209,7 +251,7 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
                 <button
                   type="button"
                   disabled
-                  className="w-full bg-red-600/40 border border-red-650/15 text-white rounded-xl py-3 text-xs font-semibold flex items-center justify-center gap-2 cursor-wait"
+                  className="w-full bg-red-600/40 border border-red-655/15 text-white rounded-xl py-3 text-xs font-semibold flex items-center justify-center gap-2 cursor-wait"
                 >
                   <RefreshCw className="h-4 w-4 animate-spin text-red-300" />
                   Fetching Playlist Channels...
@@ -218,7 +260,7 @@ export const PlaylistInput: React.FC<PlaylistInputProps> = ({
                 <button
                   type="submit"
                   disabled={!urlInput.trim()}
-                  className="w-full bg-[#E50914] hover:bg-[#B80710] disabled:bg-zinc-800 disabled:text-zinc-650 disabled:border-transparent text-white rounded-xl py-3 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg"
+                  className="w-full bg-[#E50914] hover:bg-[#B80710] disabled:bg-zinc-800 disabled:text-zinc-655 disabled:border-transparent text-white rounded-xl py-3 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg"
                 >
                   <Download className="h-4 w-4" />
                   Fetch & Load

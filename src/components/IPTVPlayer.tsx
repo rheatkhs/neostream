@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Tv2, AlertTriangle, X, Menu, Link, Download, RefreshCw } from 'lucide-react';
+import { Tv2, AlertTriangle, X, Menu, Link, Download, RefreshCw, Radio } from 'lucide-react';
 import { PlaylistInput } from './PlaylistInput';
 import { Sidebar } from './Sidebar';
 import { VideoPlayer } from './VideoPlayer';
 import { parseM3U } from '../utils/m3uParser';
 import type { IPTVChannel } from '../utils/m3uParser';
+import { parseEPG } from '../utils/epgParser';
+import type { EPGMap } from '../utils/epgParser';
 
 export const IPTVPlayer: React.FC = () => {
   const [playlistUrl, setPlaylistUrl] = useState('');
@@ -16,8 +18,9 @@ export const IPTVPlayer: React.FC = () => {
   const [corsError, setCorsError] = useState<{ url: string } | null>(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   
-  // URL Input for the empty landing page
+  // URL Inputs for the empty landing page
   const [landingUrlInput, setLandingUrlInput] = useState('');
+  const [landingEpgInput, setLandingEpgInput] = useState('');
 
   // CORS Proxy States
   const [useCorsProxy, setUseCorsProxy] = useState<boolean>(() => {
@@ -26,6 +29,11 @@ export const IPTVPlayer: React.FC = () => {
   const [corsProxyUrl, setCorsProxyUrl] = useState<string>(() => {
     return localStorage.getItem('neostream_cors_proxy_url') || 'https://corsproxy.io/?';
   });
+
+  // EPG Program states
+  const [epgUrl, setEpgUrl] = useState('');
+  const [epgData, setEpgData] = useState<EPGMap>({});
+  const [isEpgLoading, setIsEpgLoading] = useState(false);
 
   // Save proxy configurations to local storage on changes
   useEffect(() => {
@@ -60,7 +68,40 @@ export const IPTVPlayer: React.FC = () => {
         console.warn('Error loading cached playlist', e);
       }
     }
+
+    const savedEpgUrl = localStorage.getItem('neostream_epg_url');
+    if (savedEpgUrl) {
+      handleFetchEPG(savedEpgUrl);
+    }
   }, []);
+
+  // Fetch EPG XML timelines and load to memory
+  const handleFetchEPG = async (url: string) => {
+    if (!url) return;
+    setIsEpgLoading(true);
+    try {
+      const finalUrl = useCorsProxy ? `${corsProxyUrl}${url}` : url;
+      const response = await fetch(finalUrl);
+      if (!response.ok) throw new Error('EPG fetch failed');
+      const text = await response.text();
+      const parsed = parseEPG(text);
+      setEpgData(parsed);
+      setEpgUrl(url);
+      localStorage.setItem('neostream_epg_url', url);
+    } catch (e) {
+      console.warn('Failed to load EPG feed', e);
+    } finally {
+      setIsEpgLoading(false);
+    }
+  };
+
+  // Re-fetch EPG when proxy changes to stay synced
+  useEffect(() => {
+    const savedEpgUrl = localStorage.getItem('neostream_epg_url');
+    if (savedEpgUrl) {
+      handleFetchEPG(savedEpgUrl);
+    }
+  }, [useCorsProxy, corsProxyUrl]);
 
   const saveToLocalStorage = (url: string, name: string, list: IPTVChannel[]) => {
     try {
@@ -89,18 +130,23 @@ export const IPTVPlayer: React.FC = () => {
       const response = await fetch(finalUrl);
       if (!response.ok) throw new Error('Network response was not ok');
       const text = await response.text();
-      const parsed = parseM3U(text);
+      const { channels: parsedChannels, epgUrl: parsedEpgUrl } = parseM3U(text);
       
-      if (parsed.length === 0) {
+      if (parsedChannels.length === 0) {
         alert("No streaming channels found. Check playlist format.");
       } else {
-        setChannels(parsed);
+        setChannels(parsedChannels);
         setPlaylistUrl(url);
         const name = url.substring(url.lastIndexOf('/') + 1) || 'IPTV Playlist';
         setPlaylistName(name);
-        saveToLocalStorage(url, name, parsed);
+        saveToLocalStorage(url, name, parsedChannels);
         // Clean welcome state on new playlist fetch
         setActiveChannel(null);
+
+        // Fetch EPG URL parsed from the M3U header automatically
+        if (parsedEpgUrl) {
+          handleFetchEPG(parsedEpgUrl);
+        }
       }
     } catch (error) {
       console.error('Fetch error:', error);
@@ -111,10 +157,13 @@ export const IPTVPlayer: React.FC = () => {
     }
   };
 
-  const handleLandingSubmit = (e: React.FormEvent) => {
+  const handleLandingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (landingUrlInput.trim()) {
-      handleFetchPlaylist(landingUrlInput.trim());
+      await handleFetchPlaylist(landingUrlInput.trim());
+      if (landingEpgInput.trim()) {
+        handleFetchEPG(landingEpgInput.trim());
+      }
     }
   };
 
@@ -124,10 +173,14 @@ export const IPTVPlayer: React.FC = () => {
     setPlaylistUrl('');
     setPlaylistName('');
     setLandingUrlInput('');
+    setLandingEpgInput('');
+    setEpgUrl('');
+    setEpgData({});
     localStorage.removeItem('neostream_last_url');
     localStorage.removeItem('neostream_playlist_name');
     localStorage.removeItem('neostream_channels');
     localStorage.removeItem('neostream_active_channel_id');
+    localStorage.removeItem('neostream_epg_url');
   };
 
   return (
@@ -145,6 +198,9 @@ export const IPTVPlayer: React.FC = () => {
           setUseCorsProxy={setUseCorsProxy}
           corsProxyUrl={corsProxyUrl}
           setCorsProxyUrl={setCorsProxyUrl}
+          onLoadEPG={handleFetchEPG}
+          currentEpgUrl={epgUrl}
+          isEpgLoading={isEpgLoading}
         />
       )}
 
@@ -161,6 +217,7 @@ export const IPTVPlayer: React.FC = () => {
                 activeChannel={activeChannel}
                 onSelectChannel={handleSelectChannel}
                 playlistName={playlistName}
+                epgData={epgData}
               />
             </div>
 
@@ -169,7 +226,7 @@ export const IPTVPlayer: React.FC = () => {
               {/* Mobile Drawer Trigger Bar */}
               <div className="md:hidden flex items-center justify-between bg-zinc-900 border border-zinc-800 p-3.5 rounded-xl mb-3">
                 <div className="flex items-center space-x-2.5 min-w-0">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-650 animate-ping shrink-0" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-655 animate-ping shrink-0" />
                   <span className="text-xs text-zinc-300 font-semibold truncate">
                     {activeChannel ? activeChannel.name : 'Select Channel'}
                   </span>
@@ -189,6 +246,7 @@ export const IPTVPlayer: React.FC = () => {
                   channel={activeChannel} 
                   useCorsProxy={useCorsProxy}
                   corsProxyUrl={corsProxyUrl}
+                  epgData={epgData}
                 />
               </div>
             </div>
@@ -215,6 +273,7 @@ export const IPTVPlayer: React.FC = () => {
                       activeChannel={activeChannel}
                       onSelectChannel={handleSelectChannel}
                       playlistName={playlistName}
+                      epgData={epgData}
                     />
                   </div>
                 </div>
@@ -272,6 +331,21 @@ export const IPTVPlayer: React.FC = () => {
                   />
                 </div>
 
+                {/* EPG Input field (Optional) */}
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4.5 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-red-500 transition-colors">
+                    <Radio className="h-4.5 w-4.5" />
+                  </div>
+                  <input
+                    type="url"
+                    placeholder="EPG XML TV URL (Optional)"
+                    className="w-full bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-700/60 rounded-2xl pl-12 pr-4.5 py-4 text-sm text-zinc-100 placeholder-zinc-650 focus:outline-none focus:border-red-600/40 focus:ring-1 focus:ring-red-600/20 transition-all duration-200"
+                    value={landingEpgInput}
+                    onChange={(e) => setLandingEpgInput(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+
                 {/* CORS Proxy toggle option */}
                 <div className="flex items-center justify-between bg-zinc-900/30 border border-zinc-900 rounded-xl p-3.5 text-left transition-all">
                   <div className="flex flex-col pr-4">
@@ -314,7 +388,7 @@ export const IPTVPlayer: React.FC = () => {
 
               {/* Minimal Help info label */}
               <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-650 shrink-0" />
                 Supports standard HLS/M3U8 audio & video feeds
               </div>
             </div>

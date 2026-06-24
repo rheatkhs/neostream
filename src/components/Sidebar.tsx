@@ -1,12 +1,15 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Search, Tv, Play, Folder, ChevronDown } from 'lucide-react';
 import type { IPTVChannel } from '../utils/m3uParser';
+import { getChannelPrograms, getCurrentProgram } from '../utils/epgParser';
+import type { EPGMap } from '../utils/epgParser';
 
 interface SidebarProps {
   channels: IPTVChannel[];
   activeChannel: IPTVChannel | null;
   onSelectChannel: (channel: IPTVChannel) => void;
   playlistName: string;
+  epgData?: EPGMap;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -14,6 +17,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeChannel,
   onSelectChannel,
   playlistName,
+  epgData = {},
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -51,8 +55,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setScrollTop(0);
   }, [searchTerm, selectedCategory]);
 
-  // Virtualization Calculations
-  const itemHeight = 60; // constant height in pixels (adjusted slightly for spacing)
+  // Determine whether EPG feed contains data to adjust row heights dynamically
+  const hasEPG = useMemo(() => Object.keys(epgData).length > 0, [epgData]);
+  const itemHeight = hasEPG ? 76 : 60; // constant height in pixels
   const buffer = 15;     // buffer items rendered above and below viewport
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -74,6 +79,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const paddingTop = offsetStart * itemHeight;
   const paddingBottom = Math.max(0, (filteredChannels.length - offsetEnd) * itemHeight);
 
+  // Helper formats program start and stop times
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
+  // Helper calculates timeline progress bar widths
+  const calculateProgress = (start: Date, stop: Date) => {
+    const now = new Date().getTime();
+    const startMs = start.getTime();
+    const stopMs = stop.getTime();
+    if (stopMs === startMs) return 0;
+    const percentage = ((now - startMs) / (stopMs - startMs)) * 100;
+    return Math.min(100, Math.max(0, percentage));
+  };
+
   return (
     <div className="w-full h-full flex flex-col bg-zinc-950 border-r border-zinc-900">
       
@@ -81,11 +101,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4 border-b border-zinc-900/60 space-y-3 bg-[#0a0a0c]/20 select-none">
         
         {/* Playlist metadata info banner */}
-        <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-0.5 px-0.5">
+        <div className="flex items-center justify-between text-[10px] text-zinc-555 mb-0.5 px-0.5">
           <span className="truncate pr-2 font-medium" title={playlistName}>
             Source: <span className="text-zinc-400 font-semibold">{playlistName}</span>
           </span>
-          <span className="shrink-0 bg-zinc-900 border border-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full font-mono font-medium">
+          <span className="shrink-0 bg-zinc-900 border border-zinc-800 text-zinc-450 px-2 py-0.5 rounded-full font-mono font-medium">
             {filteredChannels.length} / {channels.length}
           </span>
         </div>
@@ -98,25 +118,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <input
             type="text"
             placeholder="Search channels..."
-            className="w-full bg-zinc-900/40 border border-zinc-900 rounded-xl pl-10 pr-8 py-2.5 text-xs text-zinc-200 placeholder-zinc-550 focus:outline-none focus:bg-zinc-900/70 focus:border-zinc-800 focus:ring-1 focus:ring-red-650/20 transition-all duration-200"
+            className="w-full bg-zinc-900/40 border border-zinc-800/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-zinc-100 placeholder-zinc-550 focus:outline-none focus:border-red-600/40 focus:ring-1 focus:ring-red-600/20 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-zinc-500 hover:text-zinc-300"
-            >
-              ×
-            </button>
-          )}
         </div>
 
-        {/* Category list filters */}
-        {categories.length > 2 && (
-          <div className="relative w-full">
+        {/* Dropdown Category Selector */}
+        {categories.length > 1 && (
+          <div className="relative">
             <button
-              type="button"
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="w-full flex items-center justify-between bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-850 text-xs text-zinc-300 rounded-xl px-3 py-2.5 transition-all cursor-pointer"
             >
@@ -163,12 +174,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {filteredChannels.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             <Tv className="h-10 w-10 text-zinc-800 stroke-[1.5] mb-2 animate-pulse" />
-            <p className="text-zinc-650 text-xs">No channels found matching filters</p>
+            <p className="text-zinc-655 text-xs">No channels found matching filters</p>
           </div>
         ) : (
           <div style={{ paddingTop, paddingBottom }} className="space-y-1">
             {visibleChannels.map((channel) => {
               const isActive = activeChannel?.id === channel.id;
+              
+              // EPG schedule mapping
+              const programs = epgData ? getChannelPrograms(epgData, channel) : undefined;
+              const currentProg = programs ? getCurrentProgram(programs) : null;
               
               return (
                 <button
@@ -213,9 +228,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <h3 className={`text-xs font-semibold truncate ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>
                       {channel.name}
                     </h3>
-                    <span className="text-[10px] text-zinc-500 font-medium truncate block mt-0.5">
-                      {channel.group || 'General'}
-                    </span>
+                    
+                    {currentProg ? (
+                      <div className="flex flex-col mt-0.5 space-y-0.5">
+                        <div className="flex items-center justify-between gap-1.5 min-w-0">
+                          <span className="text-[10px] text-red-500 font-semibold truncate">
+                            {currentProg.title}
+                          </span>
+                          <span className="text-[9px] text-zinc-550 shrink-0 font-medium font-mono">
+                            {formatTime(currentProg.start)}
+                          </span>
+                        </div>
+                        {/* EPG live visual bar */}
+                        <div className="w-full bg-zinc-900 rounded-full h-0.75 overflow-hidden">
+                          <div 
+                            className="bg-[#E50914] h-full rounded-full transition-all duration-500" 
+                            style={{ width: `${calculateProgress(currentProg.start, currentProg.stop)}%` }} 
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-zinc-500 font-medium truncate block mt-0.5">
+                        {channel.group || 'General'}
+                      </span>
+                    )}
                   </div>
 
                   {/* Active Playing Equalizer Animation or Hover Play icon */}

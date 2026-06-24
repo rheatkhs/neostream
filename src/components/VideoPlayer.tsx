@@ -2,14 +2,22 @@ import React, { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, RefreshCw, AlertCircle, Tv, Radio } from 'lucide-react';
 import type { IPTVChannel } from '../utils/m3uParser';
+import { getChannelPrograms, getCurrentProgram, getNextProgram } from '../utils/epgParser';
+import type { EPGMap } from '../utils/epgParser';
 
 interface VideoPlayerProps {
   channel: IPTVChannel | null;
   useCorsProxy: boolean;
   corsProxyUrl: string;
+  epgData?: EPGMap;
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel, useCorsProxy, corsProxyUrl }) => {
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
+  channel, 
+  useCorsProxy, 
+  corsProxyUrl, 
+  epgData = {} 
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
 
@@ -23,6 +31,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel, useCorsProxy,
   const [showControls, setShowControls] = useState(true);
 
   const controlsTimeoutRef = useRef<number | null>(null);
+
+  // EPG schedule mapping
+  const programs = channel ? getChannelPrograms(epgData, channel) : undefined;
+  const currentProg = programs ? getCurrentProgram(programs) : null;
+  const nextProg = programs ? getNextProgram(programs) : null;
 
   // Initialize and load stream
   const loadStream = (url: string) => {
@@ -118,22 +131,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel, useCorsProxy,
     }
   }, [volume, isMuted]);
 
-  // Listen to keyboard controls
+  // Keyboard shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore key events when typing inside inputs
-      if (document.activeElement?.tagName === 'INPUT') return;
+      // Ignore keypresses if focus is in input boxes
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        return;
+      }
 
-      switch (e.code) {
-        case 'Space':
+      switch (e.key.toLowerCase()) {
+        case ' ':
           e.preventDefault();
           togglePlay();
           break;
-        case 'KeyM':
+        case 'm':
           e.preventDefault();
           toggleMute();
           break;
-        case 'KeyF':
+        case 'f':
           e.preventDefault();
           toggleFullscreen();
           break;
@@ -144,19 +160,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel, useCorsProxy,
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, isMuted, isFullscreen]);
+  }, [isPlaying, isMuted, volume, isFullscreen]);
 
-  // Activity timeout logic for hiding player controls bar
+  // Reset controls visibility timer
   const resetControlsTimeout = () => {
-    setShowControls(true);
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
     }
+    setShowControls(true);
     controlsTimeoutRef.current = window.setTimeout(() => {
       if (isPlaying) {
         setShowControls(false);
       }
     }, 3500);
+  };
+
+  const handleMouseMove = () => {
+    resetControlsTimeout();
   };
 
   useEffect(() => {
@@ -187,30 +207,31 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel, useCorsProxy,
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseFloat(e.target.value);
-    setVolume(val);
-    if (val > 0 && isMuted) {
+    const value = parseFloat(e.target.value);
+    setVolume(value);
+    if (value > 0) {
       setIsMuted(false);
     }
     resetControlsTimeout();
   };
 
   const toggleFullscreen = () => {
-    const playerContainer = videoRef.current?.parentElement;
-    if (!playerContainer) return;
+    const container = document.getElementById('neostream-player-wrapper');
+    if (!container) return;
 
     if (!document.fullscreenElement) {
-      playerContainer.requestFullscreen()
+      container.requestFullscreen()
         .then(() => setIsFullscreen(true))
-        .catch((err) => console.error('Error enabling fullscreen:', err));
+        .catch((err) => console.error('Error entering fullscreen:', err));
     } else {
       document.exitFullscreen()
-        .then(() => setIsFullscreen(false));
+        .then(() => setIsFullscreen(false))
+        .catch((err) => console.error('Error exiting fullscreen:', err));
     }
     resetControlsTimeout();
   };
 
-  // Sync fullscreen change states (e.g. Esc key press)
+  // Sync fullscreen change with esc or standard exit states
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -219,23 +240,36 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel, useCorsProxy,
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  // Helper formats program start and stop times
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
+  // Helper calculates timeline progress bar widths
+  const calculateProgress = (start: Date, stop: Date) => {
+    const now = new Date().getTime();
+    const startMs = start.getTime();
+    const stopMs = stop.getTime();
+    if (stopMs === startMs) return 0;
+    const percentage = ((now - startMs) / (stopMs - startMs)) * 100;
+    return Math.min(100, Math.max(0, percentage));
+  };
+
   return (
     <div 
-      className="w-full h-full bg-[#000000] flex flex-col items-center justify-center relative select-none overflow-hidden"
-      onMouseMove={resetControlsTimeout}
-      onClick={resetControlsTimeout}
+      id="neostream-player-wrapper"
+      className="relative w-full h-full bg-black flex items-center justify-center select-none"
+      onMouseMove={handleMouseMove}
+      onClick={togglePlay}
     >
-      {/* HTML5 Native Video element */}
+      {/* Video Node */}
       <video
         ref={videoRef}
-        className="w-full h-full object-contain pointer-events-auto"
-        onClick={togglePlay}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
+        className="w-full h-full object-contain"
         playsInline
       />
 
-      {/* Connection & Buffering HUD */}
+      {/* Custom loading spinner */}
       {isLoading && (
         <div className="absolute inset-0 bg-black/75 flex items-center justify-center z-20 animate-fade-in">
           <div className="relative flex items-center justify-center">
@@ -248,7 +282,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel, useCorsProxy,
       {/* Streaming Error Overlay (Premium Card Design) */}
       {errorMsg && (
         <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-6 text-center z-20 animate-fade-in">
-          <div className="bg-zinc-950 border border-zinc-900 rounded-3xl max-w-md w-full p-6 shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex flex-col items-center relative overflow-hidden animate-slide-up">
+          <div className="bg-zinc-950 border border-zinc-900 rounded-3xl max-w-md w-full p-6 shadow-[0_10px_40px_rgba(0,0,0,0.8)] flex flex-col items-center relative overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="absolute top-0 left-0 right-0 h-1 bg-[#E50914]" />
             <AlertCircle className="h-10 w-10 text-[#E50914] mb-3 animate-pulse" />
             <h3 className="text-white font-bold text-sm">Playback Blocked / Offline</h3>
@@ -264,7 +298,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel, useCorsProxy,
                 Retry Playback
               </button>
               <div className="text-[10px] text-zinc-500 font-medium">
-                Try selecting a different channel from the sidebar list.
+                Try selecting a different channel or toggling the CORS proxy settings.
               </div>
             </div>
           </div>
@@ -273,24 +307,64 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel, useCorsProxy,
 
       {/* Floating Info Overlay (top left) */}
       {channel && showControls && (
-        <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none z-10 animate-fade-in">
-          <div className="bg-zinc-900/95 backdrop-blur-md border border-zinc-850 p-3 rounded-xl flex items-center gap-3 max-w-[80%] shadow-lg">
-            <div className="w-8 h-8 bg-zinc-950 rounded-lg overflow-hidden flex items-center justify-center border border-zinc-800 shrink-0">
+        <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none z-10 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-zinc-900/95 backdrop-blur-md border border-zinc-850 p-4 rounded-2xl flex items-start gap-3.5 max-w-[85%] sm:max-w-[60%] shadow-2xl pointer-events-auto">
+            <div className="w-10 h-10 bg-zinc-950 rounded-xl overflow-hidden flex items-center justify-center border border-zinc-800 shrink-0 mt-0.5">
               {channel.logo ? (
                 <img src={channel.logo} alt="" className="w-full h-full object-contain p-1" onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }} />
               ) : (
-                <Tv className="w-4 h-4 text-zinc-500" />
+                <Tv className="w-5 h-5 text-zinc-500" />
               )}
             </div>
             <div className="min-w-0">
-              <h2 className="text-xs font-bold text-zinc-100 truncate">{channel.name}</h2>
-              <p className="text-[10px] text-red-500 font-medium truncate mt-0.5">{channel.group || 'Live Stream'}</p>
+              <h2 className="text-xs font-extrabold text-zinc-100 truncate">{channel.name}</h2>
+              
+              {currentProg ? (
+                <div className="mt-1.5 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-extrabold text-red-500 uppercase tracking-wider bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded">
+                      LIVE
+                    </span>
+                    <span className="text-xs font-bold text-zinc-200 truncate block max-w-[280px]">
+                      {currentProg.title}
+                    </span>
+                  </div>
+                  {currentProg.desc && (
+                    <p className="text-[10px] text-zinc-400 line-clamp-2 max-w-[350px] leading-relaxed">
+                      {currentProg.desc}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between gap-3 text-[9px] text-zinc-500 font-mono mt-1">
+                    <span>
+                      {formatTime(currentProg.start)} - {formatTime(currentProg.stop)}
+                    </span>
+                    <span>
+                      {Math.round(calculateProgress(currentProg.start, currentProg.stop))}% completed
+                    </span>
+                  </div>
+                  {/* Progress Line */}
+                  <div className="w-full bg-zinc-850 rounded-full h-1 overflow-hidden">
+                    <div 
+                      className="bg-red-600 h-full rounded-full transition-all duration-500 animate-pulse" 
+                      style={{ width: `${calculateProgress(currentProg.start, currentProg.stop)}%` }} 
+                    />
+                  </div>
+                  {nextProg && (
+                    <div className="text-[9px] text-zinc-500 pt-1.5 border-t border-zinc-850/60 mt-1">
+                      <span className="font-semibold text-zinc-400">Up Next:</span> {nextProg.title} ({formatTime(nextProg.start)})
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[10px] text-red-500 font-medium truncate mt-0.5">{channel.group || 'Live Stream'}</p>
+              )}
             </div>
           </div>
 
-          <div className="bg-zinc-900/95 backdrop-blur-md border border-zinc-850 px-2.5 py-1.5 rounded-lg text-[10px] font-mono text-zinc-400 shadow-lg">
+          <div className="bg-zinc-900/95 backdrop-blur-md border border-zinc-850 px-3 py-2 rounded-xl text-[10px] font-bold tracking-wider text-red-500 shadow-lg shrink-0 select-none flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 bg-red-550 rounded-full animate-ping" />
             LIVE
           </div>
         </div>
@@ -302,6 +376,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ channel, useCorsProxy,
           className={`absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col gap-3 transition-opacity duration-300 z-10 ${
             showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Controls Bar Row */}
           <div className="flex items-center justify-between gap-4">

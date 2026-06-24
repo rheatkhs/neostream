@@ -356,23 +356,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Floating Info Overlay (top left) */}
       {channel && showControls && (
         <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none z-10 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-          <div className="bg-zinc-900/95 backdrop-blur-md border border-zinc-850 p-4 rounded-2xl flex items-start gap-3.5 max-w-[85%] sm:max-w-[60%] shadow-2xl pointer-events-auto">
-            <div className="w-10 h-10 bg-zinc-950 rounded-xl overflow-hidden flex items-center justify-center border border-zinc-800 shrink-0 mt-0.5">
+          <div className="glass-panel border border-white/5 p-4 rounded-2xl flex items-start gap-3.5 max-w-[85%] sm:max-w-[60%] shadow-2xl pointer-events-auto">
+            <div className="w-10 h-10 bg-black/60 rounded-xl overflow-hidden flex items-center justify-center border border-white/5 shrink-0 mt-0.5">
               {channel.logo ? (
                 <img src={channel.logo} alt="" className="w-full h-full object-contain p-1" onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }} />
               ) : (
-                <Tv className="w-5 h-5 text-zinc-500" />
+                <Tv className="w-5 h-5 text-zinc-550" />
               )}
             </div>
-            <div className="min-w-0">
-              <h2 className="text-xs font-extrabold text-zinc-100 truncate">{channel.name}</h2>
+            <div className="min-w-0 text-left">
+              <h2 className="text-xs font-black text-zinc-100 truncate tracking-wide">{channel.name}</h2>
               
               {currentProg ? (
                 <div className="mt-1.5 space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-extrabold text-red-500 uppercase tracking-wider bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded">
+                    <span className="text-[9px] font-black text-red-500 uppercase tracking-wider bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded">
                       LIVE
                     </span>
                     <span className="text-xs font-bold text-zinc-200 truncate block max-w-[280px]">
@@ -380,11 +380,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     </span>
                   </div>
                   {currentProg.desc && (
-                    <p className="text-[10px] text-zinc-400 line-clamp-2 max-w-[350px] leading-relaxed">
+                    <p className="text-[10px] text-zinc-400 line-clamp-2 max-w-[350px] leading-relaxed font-medium">
                       {currentProg.desc}
                     </p>
                   )}
-                  <div className="flex items-center justify-between gap-3 text-[9px] text-zinc-500 font-mono mt-1">
+                  <div className="flex items-center justify-between gap-3 text-[9px] text-zinc-500 font-mono mt-1 font-bold">
                     <span>
                       {formatTime(currentProg.start)} - {formatTime(currentProg.stop)}
                     </span>
@@ -393,26 +393,26 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     </span>
                   </div>
                   {/* Progress Line */}
-                  <div className="w-full bg-zinc-850 rounded-full h-1 overflow-hidden">
+                  <div className="w-full bg-black/40 border border-white/5 rounded-full h-1 overflow-hidden">
                     <div 
-                      className="bg-red-600 h-full rounded-full transition-all duration-500 animate-pulse" 
+                      className="bg-red-650 h-full rounded-full transition-all duration-500 animate-pulse" 
                       style={{ width: `${calculateProgress(currentProg.start, currentProg.stop)}%` }} 
                     />
                   </div>
                   {nextProg && (
-                    <div className="text-[9px] text-zinc-500 pt-1.5 border-t border-zinc-850/60 mt-1">
-                      <span className="font-semibold text-zinc-400">Up Next:</span> {nextProg.title} ({formatTime(nextProg.start)})
+                    <div className="text-[9px] text-zinc-500 pt-1.5 border-t border-white/5 mt-1 font-semibold">
+                      <span className="text-zinc-400">Up Next:</span> {nextProg.title} ({formatTime(nextProg.start)})
                     </div>
                   )}
                 </div>
               ) : (
-                <p className="text-[10px] text-red-500 font-medium truncate mt-0.5">{channel.group || 'Live Stream'}</p>
+                <p className="text-[10px] text-red-550 font-bold tracking-wide truncate mt-0.5">{channel.group || 'Live Stream'}</p>
               )}
             </div>
           </div>
 
-          <div className="bg-zinc-900/95 backdrop-blur-md border border-zinc-850 px-3 py-2 rounded-xl text-[10px] font-bold tracking-wider text-red-500 shadow-lg shrink-0 select-none flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 bg-red-550 rounded-full animate-ping" />
+          <div className="glass-panel border border-white/5 px-3 py-2 rounded-xl text-[9px] font-black tracking-wider text-red-500 shadow-lg shrink-0 select-none flex items-center gap-1.5 pointer-events-auto">
+            <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping" />
             LIVE
           </div>
         </div>
@@ -421,14 +421,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Fine-Tuning Drawer / Sliders Panel */}
       {channel && showControls && isSettingsOpen && (
         <div 
-          className="absolute bottom-16 right-4 w-72 bg-zinc-950/95 backdrop-blur-md border border-zinc-850 p-4 rounded-2xl shadow-2xl z-20 animate-slide-up flex flex-col gap-4 select-none pointer-events-auto"
+          className="absolute bottom-20 right-4 w-72 glass-panel-heavy border border-white/5 p-4.5 rounded-2xl shadow-2xl z-20 animate-slide-up flex flex-col gap-4 select-none pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
-            <h4 className="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
-              <Sliders className="h-3.5 w-3.5 text-red-550" />
-              Video Fine-Tuning
+          <div className="flex items-center justify-between border-b border-white/5 pb-2">
+            <h4 className="text-xs font-black tracking-wider uppercase text-zinc-200 flex items-center gap-1.5">
+              <Sliders className="h-3.5 w-3.5 text-red-500" />
+              Fine-Tuning
             </h4>
             <button
               onClick={() => {
@@ -437,39 +437,39 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 setContrast(1);
                 setSaturation(1);
               }}
-              className="text-[9px] font-bold text-red-500 hover:text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded transition-all cursor-pointer"
+              className="text-[9px] font-extrabold text-red-500 hover:text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg transition-all cursor-pointer"
             >
               Reset All
             </button>
           </div>
 
           {/* Aspect Ratio Buttons */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] text-zinc-400 font-semibold tracking-wider uppercase">Aspect Ratio</label>
+          <div className="flex flex-col gap-1.5 text-left">
+            <label className="text-[9px] text-zinc-500 font-bold tracking-wider uppercase">Aspect Ratio</label>
             <div className="grid grid-cols-3 gap-1.5">
               {(['contain', 'fill', 'cover'] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setAspectRatio(mode)}
-                  className={`text-[10px] font-bold py-1.5 rounded-lg border transition-all cursor-pointer ${
+                  className={`text-[9px] font-bold py-1.5 rounded-lg border transition-all cursor-pointer ${
                     aspectRatio === mode
-                      ? 'bg-red-950/30 border-red-650/40 text-red-500 shadow-sm font-extrabold'
-                      : 'bg-zinc-900/60 border-zinc-850 text-zinc-450 hover:text-zinc-200'
+                      ? 'bg-red-955/20 border-red-500/30 text-red-500 shadow-sm font-extrabold'
+                      : 'bg-zinc-900/40 border-white/5 text-zinc-450 hover:text-zinc-200'
                   }`}
                 >
-                  {mode === 'contain' ? 'Fit (16:9)' : mode === 'fill' ? 'Fill (Stretch)' : 'Zoom (Crop)'}
+                  {mode === 'contain' ? 'Fit (16:9)' : mode === 'fill' ? 'Fill' : 'Zoom'}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Color Correction Sliders */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 text-left">
             {/* Brightness */}
             <div className="flex flex-col gap-1">
-              <div className="flex justify-between items-center text-[10px] text-zinc-400 font-medium">
+              <div className="flex justify-between items-center text-[10px] text-zinc-400 font-bold">
                 <span>Brightness</span>
-                <span className="font-mono text-zinc-550">{Math.round(brightness * 100)}%</span>
+                <span className="font-mono text-zinc-500">{Math.round(brightness * 100)}%</span>
               </div>
               <input
                 type="range"
@@ -484,9 +484,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
             {/* Contrast */}
             <div className="flex flex-col gap-1">
-              <div className="flex justify-between items-center text-[10px] text-zinc-400 font-medium">
+              <div className="flex justify-between items-center text-[10px] text-zinc-400 font-bold">
                 <span>Contrast</span>
-                <span className="font-mono text-zinc-550">{Math.round(contrast * 100)}%</span>
+                <span className="font-mono text-zinc-500">{Math.round(contrast * 100)}%</span>
               </div>
               <input
                 type="range"
@@ -501,7 +501,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
             {/* Saturation */}
             <div className="flex flex-col gap-1">
-              <div className="flex justify-between items-center text-[10px] text-zinc-400 font-medium">
+              <div className="flex justify-between items-center text-[10px] text-zinc-400 font-bold">
                 <span>Saturation</span>
                 <span className="font-mono text-zinc-550">{Math.round(saturation * 100)}%</span>
               </div>
@@ -519,103 +519,98 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Media Controller Bar (overlay bottom) */}
+      {/* Media Controller Bar (Floating Glass Capsule Overlay bottom) */}
       {channel && (
         <div 
-          className={`absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col gap-3 transition-opacity duration-300 z-10 ${
+          className={`absolute bottom-4 left-4 right-4 glass-panel border border-white/5 px-4.5 py-3 rounded-2xl flex items-center justify-between gap-4 shadow-2xl transition-opacity duration-300 z-10 pointer-events-auto ${
             showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Controls Bar Row */}
-          <div className="flex items-center justify-between gap-4">
-            
-            {/* Play/Pause */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={togglePlay}
-                className="bg-[#E50914] hover:bg-[#B80710] text-white p-2.5 rounded-xl transition-all cursor-pointer hover:scale-105"
-                title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
-              >
-                {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
-              </button>
+          {/* Play/Pause & Refresh */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={togglePlay}
+              className="bg-[#E50914] hover:bg-[#B80710] text-white p-2.5 rounded-xl transition-all cursor-pointer hover:scale-105"
+              title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+            >
+              {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
+            </button>
 
-              <button
-                onClick={() => loadStream(channel.url)}
-                className="bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 hover:text-zinc-200 p-2.5 rounded-xl transition-all cursor-pointer"
-                title="Reload Stream"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </button>
-            </div>
+            <button
+              onClick={() => loadStream(channel.url)}
+              className="bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200 p-2.5 rounded-xl transition-all cursor-pointer"
+              title="Reload Stream"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </div>
 
-            {/* Volume slider & mute control */}
-            <div className="flex items-center gap-2 bg-zinc-900/80 backdrop-blur-sm border border-zinc-850 px-3 py-1.5 rounded-xl">
-              <button
-                onClick={toggleMute}
-                className="text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
-                title={isMuted ? 'Unmute (M)' : 'Mute (M)'}
-              >
-                {isMuted || volume === 0 ? <VolumeX className="h-4.5 w-4.5" /> : <Volume2 className="h-4.5 w-4.5" />}
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={isMuted ? 0 : volume}
-                onChange={handleVolumeChange}
-                className="w-20 accent-red-600 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
-              />
-            </div>
+          {/* Volume slider & mute control */}
+          <div className="flex items-center gap-2 bg-black/40 border border-white/5 px-3.5 py-2 rounded-xl">
+            <button
+              onClick={toggleMute}
+              className="text-zinc-450 hover:text-zinc-200 transition-colors cursor-pointer"
+              title={isMuted ? 'Unmute (M)' : 'Mute (M)'}
+            >
+              {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={isMuted ? 0 : volume}
+              onChange={handleVolumeChange}
+              className="w-16 sm:w-20 accent-red-650 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
 
-            {/* Screen Layout / Custom Settings controls */}
-            <div className="flex items-center gap-2">
-              {/* Fine Tuning settings toggle */}
-              <button
-                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                className={`border p-2.5 rounded-xl transition-all cursor-pointer ${
-                  isSettingsOpen 
-                    ? 'bg-red-950/20 border-red-600/40 text-red-500' 
-                    : 'bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-850 text-zinc-400 hover:text-zinc-200'
-                }`}
-                title="Video Fine-Tuning"
-              >
-                <Sliders className="h-4.5 w-4.5" />
-              </button>
+          {/* Screen Layout / Custom Settings controls */}
+          <div className="flex items-center gap-1.5">
+            {/* Fine Tuning settings toggle */}
+            <button
+              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+              className={`border p-2.5 rounded-xl transition-all cursor-pointer ${
+                isSettingsOpen 
+                  ? 'bg-red-955/20 border-red-500/30 text-red-500' 
+                  : 'bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Video Fine-Tuning"
+            >
+              <Sliders className="h-4 w-4" />
+            </button>
 
-              {/* Native PIP trigger */}
-              <button
-                onClick={handleTogglePip}
-                className="bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-850 text-zinc-400 hover:text-zinc-200 p-2.5 rounded-xl transition-all cursor-pointer"
-                title="Picture-in-Picture"
-              >
-                <ExternalLink className="h-4.5 w-4.5" />
-              </button>
+            {/* Native PIP trigger */}
+            <button
+              onClick={handleTogglePip}
+              className="bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200 p-2.5 rounded-xl transition-all cursor-pointer"
+              title="Picture-in-Picture"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </button>
 
-              {/* Mini-player overlay toggle */}
-              <button
-                onClick={() => setIsMiniPlayer(!isMiniPlayer)}
-                className={`border p-2.5 rounded-xl transition-all cursor-pointer ${
-                  isMiniPlayer 
-                    ? 'bg-red-950/20 border-red-600/40 text-red-500 animate-pulse' 
-                    : 'bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-850 text-zinc-400 hover:text-zinc-200'
-                }`}
-                title={isMiniPlayer ? 'Restore Viewport' : 'Floating Mini Player'}
-              >
-                {isMiniPlayer ? <Maximize2 className="h-4.5 w-4.5" /> : <Minimize2 className="h-4.5 w-4.5" />}
-              </button>
+            {/* Mini-player overlay toggle */}
+            <button
+              onClick={() => setIsMiniPlayer(!isMiniPlayer)}
+              className={`border p-2.5 rounded-xl transition-all cursor-pointer ${
+                isMiniPlayer 
+                  ? 'bg-red-955/20 border-red-500/30 text-red-500 animate-pulse' 
+                  : 'bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200'
+              }`}
+              title={isMiniPlayer ? 'Restore Viewport' : 'Floating Mini Player'}
+            >
+              {isMiniPlayer ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+            </button>
 
-              {/* Standard Fullscreen Toggle */}
-              <button
-                onClick={toggleFullscreen}
-                className="bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-850 text-zinc-400 hover:text-zinc-200 p-2.5 rounded-xl transition-all cursor-pointer"
-                title="Fullscreen (F)"
-              >
-                {isFullscreen ? <Minimize className="h-4.5 w-4.5" /> : <Maximize className="h-4.5 w-4.5" />}
-              </button>
-            </div>
-
+            {/* Standard Fullscreen Toggle */}
+            <button
+              onClick={toggleFullscreen}
+              className="bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200 p-2.5 rounded-xl transition-all cursor-pointer"
+              title="Fullscreen (F)"
+            >
+              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+            </button>
           </div>
         </div>
       )}
@@ -623,27 +618,27 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Welcome Screen Placeholder */}
       {!channel && (
         <div className="text-center p-8 flex flex-col items-center justify-center max-w-md animate-fade-in relative z-10">
-          <div className="w-20 h-20 bg-red-650/10 rounded-3xl flex items-center justify-center border border-red-650/20 mb-6 shadow-[0_0_50px_rgba(229,9,20,0.15)] animate-pulse">
-            <Radio className="w-10 h-10 text-[#E50914]" />
+          <div className="w-16 h-16 bg-red-650/10 rounded-2xl flex items-center justify-center border border-red-650/20 mb-6 shadow-[0_0_50px_rgba(229,9,20,0.15)] animate-pulse">
+            <Radio className="w-8 h-8 text-[#E50914]" />
           </div>
-          <h2 className="text-xl font-bold text-zinc-100 tracking-wider">NEOSTREAM IPTV</h2>
-          <p className="text-zinc-550 text-xs mt-2.5 leading-relaxed">
+          <h2 className="text-lg font-black tracking-widest text-zinc-100 uppercase">NEOSTREAM IPTV</h2>
+          <p className="text-zinc-450 text-xs mt-2.5 leading-relaxed font-semibold">
             Playlist loaded successfully! Select any channel from the left sidebar channel list to begin streaming.
           </p>
           
           {/* Quick HUD guide */}
-          <div className="mt-8 grid grid-cols-3 gap-3 w-full border-t border-zinc-900/80 pt-6">
+          <div className="mt-8 grid grid-cols-3 gap-3 w-full border-t border-white/5 pt-6 font-semibold select-none">
             <div className="flex flex-col items-center">
-              <span className="bg-zinc-900 px-2 py-1 rounded text-[10px] font-mono text-zinc-400 border border-zinc-850">SPACE</span>
+              <span className="bg-zinc-900/60 px-2 py-1 rounded-lg text-[9px] font-bold font-mono text-zinc-400 border border-white/5">SPACE</span>
               <span className="text-[10px] text-zinc-550 mt-1.5">Play/Pause</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="bg-zinc-900 px-2 py-1 rounded text-[10px] font-mono text-zinc-400 border border-zinc-850">F KEY</span>
-              <span className="text-[10px] text-zinc-555 mt-1.5">Fullscreen</span>
+              <span className="bg-zinc-900/60 px-2 py-1 rounded-lg text-[9px] font-bold font-mono text-zinc-400 border border-white/5">F KEY</span>
+              <span className="text-[10px] text-zinc-550 mt-1.5">Fullscreen</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="bg-zinc-900 px-2 py-1 rounded text-[10px] font-mono text-zinc-400 border border-zinc-850">M KEY</span>
-              <span className="text-[10px] text-zinc-555 mt-1.5">Mute Audio</span>
+              <span className="bg-zinc-900/60 px-2 py-1 rounded-lg text-[9px] font-bold font-mono text-zinc-400 border border-white/5">M KEY</span>
+              <span className="text-[10px] text-zinc-550 mt-1.5">Mute Audio</span>
             </div>
           </div>
         </div>

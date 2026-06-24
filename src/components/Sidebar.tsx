@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useDeferredValue } from 'react';
 import { Search, Tv, Play, Folder, ChevronDown } from 'lucide-react';
 import type { IPTVChannel } from '../utils/m3uParser';
 import { getChannelPrograms, getCurrentProgram } from '../utils/epgParser';
@@ -20,6 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   epgData = {},
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -41,11 +42,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Filter channels based on search term and category
   const filteredChannels = useMemo(() => {
     return channels.filter(ch => {
-      const matchesSearch = ch.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = ch.name.toLowerCase().includes(deferredSearchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'All' || ch.group === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [channels, searchTerm, selectedCategory]);
+  }, [channels, deferredSearchTerm, selectedCategory]);
 
   // Reset scroll position on filter/search change
   useEffect(() => {
@@ -208,7 +209,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         src={channel.logo}
                         alt={channel.name}
                         loading="lazy"
-                        className="w-full h-full object-contain p-1"
+                        className="w-full h-full object-contain p-1 opacity-0 transition-opacity duration-300"
+                        onLoad={(e) => {
+                          e.currentTarget.classList.remove('opacity-0');
+                          e.currentTarget.classList.add('opacity-100');
+                        }}
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = 'none';
                           const parent = (e.target as HTMLImageElement).parentNode as HTMLElement;

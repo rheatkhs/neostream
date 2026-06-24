@@ -3,9 +3,9 @@ import { Tv2, AlertTriangle, X, Menu, Link, Download, RefreshCw, Radio } from 'l
 import { PlaylistInput } from './PlaylistInput';
 import { Sidebar } from './Sidebar';
 import { VideoPlayer } from './VideoPlayer';
-import { parseM3U } from '../utils/m3uParser';
+import { dbGet, dbSet, dbClearAll } from '../utils/db';
+import { runParserInWorker } from '../utils/parserWorker';
 import type { IPTVChannel } from '../utils/m3uParser';
-import { parseEPG } from '../utils/epgParser';
 import type { EPGMap } from '../utils/epgParser';
 
 export const IPTVPlayer: React.FC = () => {
@@ -49,33 +49,45 @@ export const IPTVPlayer: React.FC = () => {
 
   // Load last playlist URL or state on mount if saved
   useEffect(() => {
-    const savedUrl = localStorage.getItem('neostream_last_url');
-    const savedName = localStorage.getItem('neostream_playlist_name');
-    const savedChannels = localStorage.getItem('neostream_channels');
-    
-    if (savedChannels) {
+    const loadSavedData = async () => {
       try {
-        const parsed = JSON.parse(savedChannels);
-        if (parsed.length > 0) {
-          setChannels(parsed);
+        const savedUrl = await dbGet<string>('neostream_last_url');
+        const savedName = await dbGet<string>('neostream_playlist_name');
+        const savedChannels = await dbGet<IPTVChannel[]>('neostream_channels');
+        
+        if (savedChannels && savedChannels.length > 0) {
+          setChannels(savedChannels);
           setPlaylistUrl(savedUrl || '');
           setPlaylistName(savedName || 'Restored Playlist');
           
-          const savedActiveId = localStorage.getItem('neostream_active_channel_id');
+          const savedActiveId = await dbGet<string>('neostream_active_channel_id');
           if (savedActiveId) {
-            const found = parsed.find((c: IPTVChannel) => c.id === savedActiveId);
+            const found = savedChannels.find((c: IPTVChannel) => c.id === savedActiveId);
             if (found) setActiveChannel(found);
           }
         }
-      } catch (e) {
-        console.warn('Error loading cached playlist', e);
+        
+        const savedEpgUrl = await dbGet<string>('neostream_epg_url');
+        const savedEpgData = await dbGet<EPGMap>('neostream_epg_data');
+        if (savedEpgData) {
+          // Map raw date strings back to Date objects
+          for (const key in savedEpgData) {
+            savedEpgData[key] = savedEpgData[key].map((prog: any) => ({
+              ...prog,
+              start: new Date(prog.start),
+              stop: new Date(prog.stop),
+            }));
+          }
+          setEpgData(savedEpgData);
+          setEpgUrl(savedEpgUrl || '');
+        } else if (savedEpgUrl) {
+          handleFetchEPG(savedEpgUrl);
+        }
+      } catch (err) {
+        console.warn('Error loading cached database values', err);
       }
-    }
-
-    const savedEpgUrl = localStorage.getItem('neostream_epg_url');
-    if (savedEpgUrl) {
-      handleFetchEPG(savedEpgUrl);
-    }
+    };
+    loadSavedData();
   }, []);
 
   // Fetch EPG XML timelines and load to memory
@@ -87,10 +99,15 @@ export const IPTVPlayer: React.FC = () => {
       const response = await fetch(finalUrl);
       if (!response.ok) throw new Error('EPG fetch failed');
       const text = await response.text();
-      const parsed = parseEPG(text);
+      
+      // Offload EPG parsing to Web Worker!
+      const result = await runParserInWorker('XMLTV', text);
+      const parsed = result.epgData;
+      
       setEpgData(parsed);
       setEpgUrl(url);
-      localStorage.setItem('neostream_epg_url', url);
+      await dbSet('neostream_epg_url', url);
+      await dbSet('neostream_epg_data', parsed);
     } catch (e) {
       console.warn('Failed to load EPG feed', e);
     } finally {
@@ -100,26 +117,28 @@ export const IPTVPlayer: React.FC = () => {
 
   // Re-fetch EPG when proxy changes to stay synced
   useEffect(() => {
-    const savedEpgUrl = localStorage.getItem('neostream_epg_url');
-    if (savedEpgUrl) {
-      handleFetchEPG(savedEpgUrl);
-    }
+    const checkSavedEpg = async () => {
+      const savedEpgUrl = await dbGet<string>('neostream_epg_url');
+      if (savedEpgUrl) {
+        handleFetchEPG(savedEpgUrl);
+      }
+    };
+    checkSavedEpg();
   }, [useCorsProxy, corsProxyUrl]);
 
-  const saveToLocalStorage = (url: string, name: string, list: IPTVChannel[]) => {
+  const saveToDB = async (url: string, name: string, list: IPTVChannel[]) => {
     try {
-      localStorage.setItem('neostream_last_url', url);
-      localStorage.setItem('neostream_playlist_name', name);
-      localStorage.setItem('neostream_channels', JSON.stringify(list));
+      await dbSet('neostream_last_url', url);
+      await dbSet('neostream_playlist_name', name);
+      await dbSet('neostream_channels', list);
     } catch (e) {
-      console.warn('Playlist too large for localStorage quota. Skipping caching.', e);
-      localStorage.removeItem('neostream_channels');
+      console.warn('Database write failed', e);
     }
   };
 
-  const handleSelectChannel = (channel: IPTVChannel) => {
+  const handleSelectChannel = async (channel: IPTVChannel) => {
     setActiveChannel(channel);
-    localStorage.setItem('neostream_active_channel_id', channel.id);
+    await dbSet('neostream_active_channel_id', channel.id);
     setMobileDrawerOpen(false);
     setIsMiniPlayer(false);
   };
@@ -134,7 +153,9 @@ export const IPTVPlayer: React.FC = () => {
       const response = await fetch(finalUrl);
       if (!response.ok) throw new Error('Network response was not ok');
       const text = await response.text();
-      const { channels: parsedChannels, epgUrl: parsedEpgUrl } = parseM3U(text);
+      
+      // Offload M3U parsing to background worker thread!
+      const { channels: parsedChannels, tvgUrl: parsedEpgUrl } = await runParserInWorker('M3U', text);
       
       if (parsedChannels.length === 0) {
         alert("No streaming channels found. Check playlist format.");
@@ -143,18 +164,15 @@ export const IPTVPlayer: React.FC = () => {
         setPlaylistUrl(url);
         const name = url.substring(url.lastIndexOf('/') + 1) || 'IPTV Playlist';
         setPlaylistName(name);
-        saveToLocalStorage(url, name, parsedChannels);
-        // Clean welcome state on new playlist fetch
+        await saveToDB(url, name, parsedChannels);
         setActiveChannel(null);
 
-        // Fetch EPG URL parsed from the M3U header automatically
         if (parsedEpgUrl) {
           handleFetchEPG(parsedEpgUrl);
         }
       }
     } catch (error) {
       console.error('Fetch error:', error);
-      // Trigger CORS help state
       setCorsError({ url });
     } finally {
       setIsLoading(false);
@@ -171,7 +189,7 @@ export const IPTVPlayer: React.FC = () => {
     }
   };
 
-  const handleClearPlaylist = () => {
+  const handleClearPlaylist = async () => {
     setChannels([]);
     setActiveChannel(null);
     setPlaylistUrl('');
@@ -181,11 +199,7 @@ export const IPTVPlayer: React.FC = () => {
     setEpgUrl('');
     setEpgData({});
     setIsMiniPlayer(false);
-    localStorage.removeItem('neostream_last_url');
-    localStorage.removeItem('neostream_playlist_name');
-    localStorage.removeItem('neostream_channels');
-    localStorage.removeItem('neostream_active_channel_id');
-    localStorage.removeItem('neostream_epg_url');
+    await dbClearAll();
   };
 
   return (

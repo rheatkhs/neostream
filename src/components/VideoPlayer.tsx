@@ -42,8 +42,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Player state controls
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.8);
-  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState<number>(() => {
+    const saved = localStorage.getItem('neostream_volume');
+    return saved !== null ? parseFloat(saved) : 0.8;
+  });
+  const [isMuted, setIsMuted] = useState<boolean>(() => {
+    const saved = localStorage.getItem('neostream_muted');
+    return saved === 'true';
+  });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -168,6 +174,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [volume, isMuted]);
 
+  // Volume update helper that persists state
+  const updateVolume = (newVol: number) => {
+    const v = Math.min(1, Math.max(0, newVol));
+    setVolume(v);
+    localStorage.setItem('neostream_volume', String(v));
+    if (v > 0) {
+      setIsMuted(false);
+      localStorage.setItem('neostream_muted', 'false');
+    } else {
+      setIsMuted(true);
+      localStorage.setItem('neostream_muted', 'true');
+    }
+  };
+
   // Keyboard shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -189,6 +209,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         case 'f':
           e.preventDefault();
           toggleFullscreen();
+          break;
+        case 'arrowup':
+          e.preventDefault();
+          updateVolume(volume + 0.05);
+          break;
+        case 'arrowdown':
+          e.preventDefault();
+          updateVolume(volume - 0.05);
+          break;
+        case 'arrowleft':
+          e.preventDefault();
+          setBrightness(b => Math.max(0.5, Math.min(1.5, b - 0.05)));
+          setContrast(c => Math.max(0.5, Math.min(1.5, c - 0.05)));
+          break;
+        case 'arrowright':
+          e.preventDefault();
+          setBrightness(b => Math.max(0.5, Math.min(1.5, b + 0.05)));
+          setContrast(c => Math.max(0.5, Math.min(1.5, c + 0.05)));
           break;
         default:
           break;
@@ -239,16 +277,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted);
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    localStorage.setItem('neostream_muted', String(newMuted));
     resetControlsTimeout();
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
-    setVolume(value);
-    if (value > 0) {
-      setIsMuted(false);
-    }
+    updateVolume(value);
     resetControlsTimeout();
   };
 
@@ -366,38 +403,38 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Floating Info Overlay (top left) */}
       {channel && showControls && (
-        <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none z-10 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-          <div className="glass-panel border border-white/5 p-4 rounded-2xl flex items-start gap-3.5 max-w-[85%] sm:max-w-[60%] shadow-2xl pointer-events-auto">
-            <div className="w-10 h-10 bg-black/60 rounded-xl overflow-hidden flex items-center justify-center border border-white/5 shrink-0 mt-0.5">
+        <div className="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 flex justify-between items-start pointer-events-none z-10 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+          <div className="glass-panel border border-white/5 p-2.5 sm:p-4 rounded-2xl flex items-start gap-2.5 sm:gap-3.5 max-w-[85%] sm:max-w-[60%] shadow-2xl pointer-events-auto">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-black/60 rounded-xl overflow-hidden flex items-center justify-center border border-white/5 shrink-0 mt-0.5">
               {channel.logo && !logoError ? (
                 <img src={channel.logo} alt="" className="w-full h-full object-contain p-1" onError={() => setLogoError(true)} />
               ) : (
-                <Tv className="w-5 h-5 text-zinc-550" />
+                <Tv className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-550" />
               )}
             </div>
             <div className="min-w-0 text-left">
-              <h2 className="text-xs font-black text-zinc-100 truncate tracking-wide">{channel.name}</h2>
+              <h2 className="text-[10px] sm:text-xs font-black text-zinc-100 truncate tracking-wide">{channel.name}</h2>
               
               {currentProg ? (
-                <div className="mt-1.5 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-black text-red-500 uppercase tracking-wider bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded">
+                <div className="mt-1 space-y-1 sm:mt-1.5 sm:space-y-1.5">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-[8px] sm:text-[9px] font-black text-red-500 uppercase tracking-wider bg-red-500/10 border border-red-500/20 px-1 sm:px-1.5 py-0.5 rounded">
                       LIVE
                     </span>
-                    <span className="text-xs font-bold text-zinc-200 truncate block max-w-[280px]">
+                    <span className="text-[10px] sm:text-xs font-bold text-zinc-200 truncate block max-w-[150px] sm:max-w-[280px]">
                       {currentProg.title}
                     </span>
                   </div>
                   {currentProg.desc && (
-                    <p className="text-[10px] text-zinc-400 line-clamp-2 max-w-[350px] leading-relaxed font-medium">
+                    <p className="text-[9px] sm:text-[10px] text-zinc-400 line-clamp-1 sm:line-clamp-2 max-w-[200px] sm:max-w-[350px] leading-relaxed font-medium">
                       {currentProg.desc}
                     </p>
                   )}
-                  <div className="flex items-center justify-between gap-3 text-[9px] text-zinc-500 font-mono mt-1 font-bold">
+                  <div className="flex items-center justify-between gap-3 text-[8px] sm:text-[9px] text-zinc-500 font-mono mt-0.5 sm:mt-1 font-bold">
                     <span>
                       {formatTime(currentProg.start)} - {formatTime(currentProg.stop)}
                     </span>
-                    <span>
+                    <span className="hidden sm:inline">
                       {Math.round(calculateProgress(currentProg.start, currentProg.stop))}% completed
                     </span>
                   </div>
@@ -409,7 +446,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     />
                   </div>
                   {nextProg && (
-                    <div className="text-[9px] text-zinc-500 pt-1.5 border-t border-white/5 mt-1 font-semibold">
+                    <div className="text-[9px] text-zinc-500 pt-1.5 border-t border-white/5 mt-1 font-semibold hidden sm:block">
                       <span className="text-zinc-400">Up Next:</span> {nextProg.title} ({formatTime(nextProg.start)})
                     </div>
                   )}
@@ -420,8 +457,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
           </div>
 
-          <div className="glass-panel border border-white/5 px-3 py-2 rounded-xl text-[9px] font-black tracking-wider text-red-500 shadow-lg shrink-0 select-none flex items-center gap-1.5 pointer-events-auto">
-            <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping" />
+          <div className="glass-panel border border-white/5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[8px] sm:text-[9px] font-black tracking-wider text-red-500 shadow-lg shrink-0 select-none flex items-center gap-1 sm:gap-1.5 pointer-events-auto">
+            <span className="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-red-500 rounded-full animate-ping" />
             LIVE
           </div>
         </div>
@@ -430,7 +467,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Fine-Tuning Drawer / Sliders Panel */}
       {channel && showControls && isSettingsOpen && (
         <div 
-          className="absolute bottom-20 right-4 w-72 glass-panel-heavy border border-white/5 p-4.5 rounded-2xl shadow-2xl z-20 animate-slide-up flex flex-col gap-4 select-none pointer-events-auto"
+          className="absolute bottom-20 left-4 right-4 sm:left-auto sm:w-72 glass-panel-heavy border border-white/5 p-4 sm:p-4.5 rounded-2xl shadow-2xl z-20 animate-slide-up flex flex-col gap-4 select-none pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -531,38 +568,38 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Media Controller Bar (Floating Glass Capsule Overlay bottom) */}
       {channel && (
         <div 
-          className={`absolute bottom-4 left-4 right-4 glass-panel border border-white/5 px-4.5 py-3 rounded-2xl flex items-center justify-between gap-4 shadow-2xl transition-opacity duration-300 z-10 pointer-events-auto ${
+          className={`absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 glass-panel border border-white/5 px-3 py-2 sm:px-4.5 sm:py-3 rounded-2xl flex items-center justify-between gap-2.5 sm:gap-4 shadow-2xl transition-opacity duration-300 z-10 pointer-events-auto ${
             showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Play/Pause & Refresh */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={togglePlay}
-              className="bg-[#E50914] hover:bg-[#B80710] text-white p-2.5 rounded-xl transition-all cursor-pointer hover:scale-105"
+              className="bg-[#E50914] hover:bg-[#B80710] text-white p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer hover:scale-105"
               title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
             >
-              {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
+              {isPlaying ? <Pause className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" /> : <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" />}
             </button>
 
             <button
               onClick={() => loadStream(channel.url)}
-              className="bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200 p-2.5 rounded-xl transition-all cursor-pointer"
+              className="bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200 p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer"
               title="Reload Stream"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </button>
           </div>
 
           {/* Volume slider & mute control */}
-          <div className="flex items-center gap-2 bg-black/40 border border-white/5 px-3.5 py-2 rounded-xl">
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-black/40 border border-white/5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl">
             <button
               onClick={toggleMute}
               className="text-zinc-450 hover:text-zinc-200 transition-colors cursor-pointer"
               title={isMuted ? 'Unmute (M)' : 'Mute (M)'}
             >
-              {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              {isMuted || volume === 0 ? <VolumeX className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
             </button>
             <input
               type="range"
@@ -571,54 +608,54 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               step="0.05"
               value={isMuted ? 0 : volume}
               onChange={handleVolumeChange}
-              className="w-16 sm:w-20 accent-red-650 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+              className="hidden sm:block w-16 sm:w-20 accent-red-650 h-1 bg-zinc-850 rounded-lg appearance-none cursor-pointer"
             />
           </div>
 
           {/* Screen Layout / Custom Settings controls */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             {/* Fine Tuning settings toggle */}
             <button
               onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-              className={`border p-2.5 rounded-xl transition-all cursor-pointer ${
+              className={`border p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
                 isSettingsOpen 
                   ? 'bg-red-955/20 border-red-500/30 text-red-500' 
                   : 'bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200'
               }`}
               title="Video Fine-Tuning"
             >
-              <Sliders className="h-4 w-4" />
+              <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </button>
 
             {/* Native PIP trigger */}
             <button
               onClick={handleTogglePip}
-              className="bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200 p-2.5 rounded-xl transition-all cursor-pointer"
+              className="bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200 p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer"
               title="Picture-in-Picture"
             >
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </button>
 
             {/* Mini-player overlay toggle */}
             <button
               onClick={() => setIsMiniPlayer(!isMiniPlayer)}
-              className={`border p-2.5 rounded-xl transition-all cursor-pointer ${
+              className={`border p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer ${
                 isMiniPlayer 
                   ? 'bg-red-955/20 border-red-500/30 text-red-500 animate-pulse' 
                   : 'bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200'
               }`}
               title={isMiniPlayer ? 'Restore Viewport' : 'Floating Mini Player'}
             >
-              {isMiniPlayer ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+              {isMiniPlayer ? <Maximize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Minimize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
             </button>
 
             {/* Standard Fullscreen Toggle */}
             <button
               onClick={toggleFullscreen}
-              className="bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200 p-2.5 rounded-xl transition-all cursor-pointer"
+              className="bg-zinc-900/60 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-zinc-200 p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer"
               title="Fullscreen (F)"
             >
-              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+              {isFullscreen ? <Minimize className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Maximize className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
             </button>
           </div>
         </div>

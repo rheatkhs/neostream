@@ -43,7 +43,7 @@ export const ChangePlaylistModal: React.FC<ChangePlaylistModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
       <div
-        className="glass-panel-heavy rounded-3xl max-w-lg w-full shadow-2xl p-6 relative overflow-hidden animate-slide-up border border-white/5"
+        className="glass-panel-heavy rounded-3xl max-w-lg w-full shadow-2xl p-4.5 sm:p-6 relative overflow-hidden animate-slide-up border border-white/5"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Red header stripe */}

@@ -36,8 +36,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <div className="w-full bg-[#030303]/75 backdrop-blur-xl border-b border-white/5 px-6 py-3.5 sticky top-0 z-40 transition-all shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+    <div className="w-full bg-[#030303]/75 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 sticky top-0 z-40 transition-all shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
 
         {/* Logo */}
         <Logo size="sm" />
@@ -65,15 +65,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
 
         {/* Controls */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {hasPlaylist && (
             <button
               type="button"
               onClick={onChangePlaylist}
-              className="bg-zinc-900/60 hover:bg-zinc-800/80 hover:text-white border border-white/5 text-zinc-300 rounded-xl px-3.5 py-2 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md hover:scale-[1.01]"
+              className="bg-zinc-900/60 hover:bg-zinc-800/80 hover:text-white border border-white/5 text-zinc-300 rounded-xl px-2.5 sm:px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-md hover:scale-[1.01]"
             >
               <Link className="h-3.5 w-3.5 text-red-500" />
-              Change Playlist
+              <span className="hidden sm:inline">Change Playlist</span>
+              <span className="inline sm:hidden">Change</span>
             </button>
           )}
 

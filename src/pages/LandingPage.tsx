@@ -38,7 +38,7 @@ export const LandingPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between w-full h-full bg-[#030303] relative px-6 py-12 md:py-20 select-none overflow-y-auto font-sans">
+    <div className="flex-1 flex flex-col justify-between w-full h-full bg-[#030303] relative px-4 sm:px-6 py-6 sm:py-12 md:py-20 select-none overflow-y-auto font-sans">
 
       {/* Background abstract lighting */}
       <div className="absolute top-[20%] left-[50%] -translate-x-[50%] -translate-y-[50%] w-[600px] h-[600px] bg-red-600/[0.04] rounded-full blur-[120px] pointer-events-none" />
@@ -53,8 +53,8 @@ export const LandingPage: React.FC = () => {
       </div>
 
       {/* Central Main Input Section */}
-      <div className="w-full max-w-4xl mx-auto flex flex-col items-center py-12 md:py-20 text-center z-10">
-        <div className="w-full space-y-8 animate-slide-up">
+      <div className="w-full max-w-4xl mx-auto flex flex-col items-center py-6 sm:py-12 md:py-20 text-center z-10">
+        <div className="w-full space-y-5 sm:space-y-8 animate-slide-up">
 
           <div className="space-y-3 text-center pb-2 select-none">
             <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white uppercase bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent">

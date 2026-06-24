@@ -15,7 +15,7 @@ export const CorsErrorModal: React.FC<CorsErrorModalProps> = ({
   onClose,
 }) => (
   <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-    <div className="bg-zinc-950 border border-zinc-900 rounded-3xl max-w-md w-full shadow-2xl p-6 relative overflow-hidden animate-slide-up">
+    <div className="bg-zinc-950 border border-zinc-900 rounded-3xl max-w-md w-full shadow-2xl p-4.5 sm:p-6 relative overflow-hidden animate-slide-up">
 
       <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
 

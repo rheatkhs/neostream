@@ -48,9 +48,15 @@
 
 ## 🖥️ Screenshots
 
-> **Landing Page** — Connect your M3U playlist with an optional EPG feed and CORS proxy toggle.
+### Landing Page
+Connect your M3U playlist with an optional EPG feed and CORS proxy toggle.
 
-> **Player Page** — Full-featured player with sidebar channel list, EPG overlays, and floating media controls.
+![Landing Page](public/landing-page.png)
+
+### Player Page
+Full-featured player with sidebar channel list, EPG overlays, and floating media controls.
+
+![Player Page](public/player-page.png)
 
 ---
 

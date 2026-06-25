@@ -14,11 +14,32 @@ import {
   Sliders, 
   ExternalLink, 
   Minimize2, 
-  Maximize2 
+  Maximize2,
+  Languages,
+  Captions 
 } from 'lucide-react';
 import type { IPTVChannel } from '../utils/m3uParser';
 import { getChannelPrograms, getCurrentProgram, getNextProgram } from '../utils/epgParser';
 import type { EPGMap } from '../utils/epgParser';
+
+// Track info types for Quality, Audio, and Subtitle selectors
+interface QualityLevel {
+  index: number;
+  height: number;
+  bitrate: number;
+}
+
+interface AudioTrackInfo {
+  index: number;
+  name: string;
+  lang: string;
+}
+
+interface SubtitleTrackInfo {
+  index: number;
+  name: string;
+  lang: string;
+}
 
 interface VideoPlayerProps {
   channel: IPTVChannel | null;
@@ -63,6 +84,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [saturation, setSaturation] = useState<number>(1);
   const [logoError, setLogoError] = useState(false);
 
+  // Stream track selection states
+  const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([]);
+  const [currentQuality, setCurrentQuality] = useState<number>(-1); // -1 = Auto
+  const [audioTracks, setAudioTracks] = useState<AudioTrackInfo[]>([]);
+  const [currentAudioTrack, setCurrentAudioTrack] = useState<number>(0);
+  const [subtitleTracks, setSubtitleTracks] = useState<SubtitleTrackInfo[]>([]);
+  const [currentSubtitleTrack, setCurrentSubtitleTrack] = useState<number>(-1); // -1 = Off
+
   useEffect(() => {
     setLogoError(false);
   }, [channel]);
@@ -103,14 +132,55 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       hls.loadSource(finalUrl);
       hls.attachMedia(video);
 
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
         setIsLoading(false);
+
+        // Populate quality levels from parsed manifest
+        const levels: QualityLevel[] = (data.levels || hls.levels || []).map((lvl: any, i: number) => ({
+          index: i,
+          height: lvl.height || 0,
+          bitrate: lvl.bitrate || 0,
+        })).filter((l: QualityLevel) => l.height > 0);
+        setQualityLevels(levels);
+        setCurrentQuality(-1); // default to Auto
+
+        // Populate audio tracks
+        const aTracks: AudioTrackInfo[] = (data.audioTracks || hls.audioTracks || []).map((t: any, i: number) => ({
+          index: i,
+          name: t.name || t.lang || `Track ${i + 1}`,
+          lang: t.lang || '',
+        }));
+        setAudioTracks(aTracks);
+        setCurrentAudioTrack(hls.audioTrack >= 0 ? hls.audioTrack : 0);
+
+        // Populate subtitle tracks
+        const sTracks: SubtitleTrackInfo[] = (data.subtitleTracks || hls.subtitleTracks || []).map((t: any, i: number) => ({
+          index: i,
+          name: t.name || t.lang || `Subtitle ${i + 1}`,
+          lang: t.lang || '',
+        }));
+        setSubtitleTracks(sTracks);
+        setCurrentSubtitleTrack(-1); // Off by default
+
         video.play()
           .then(() => setIsPlaying(true))
           .catch(() => {
             // Autoplay blocked: set state but don't crash
             setIsPlaying(false);
           });
+      });
+
+      // Sync state when HLS switches levels/tracks internally
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+        setCurrentQuality(data.level);
+      });
+
+      hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (_event, data) => {
+        setCurrentAudioTrack(data.id);
+      });
+
+      hls.on(Hls.Events.SUBTITLE_TRACK_SWITCH, (_event, data) => {
+        setCurrentSubtitleTrack(data.id);
       });
 
       hls.on(Hls.Events.ERROR, (_, data) => {
@@ -482,6 +552,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 setBrightness(1);
                 setContrast(1);
                 setSaturation(1);
+                // Reset stream track selections
+                if (hlsRef.current) {
+                  hlsRef.current.currentLevel = -1;
+                  if (hlsRef.current.audioTracks.length > 0) hlsRef.current.audioTrack = 0;
+                  hlsRef.current.subtitleTrack = -1;
+                  hlsRef.current.subtitleDisplay = false;
+                }
+                setCurrentQuality(-1);
+                setCurrentAudioTrack(0);
+                setCurrentSubtitleTrack(-1);
               }}
               className="text-[9px] font-extrabold text-red-500 hover:text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg transition-all cursor-pointer"
             >
@@ -562,6 +642,126 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               />
             </div>
           </div>
+
+          {/* Stream Quality Selector — only shown when multiple quality levels are available */}
+          {qualityLevels.length > 1 && (
+            <div className="flex flex-col gap-1.5 text-left border-t border-white/5 pt-3">
+              <label className="text-[9px] text-zinc-500 font-bold tracking-wider uppercase flex items-center gap-1.5">
+                <Sliders className="h-3 w-3" />
+                Stream Quality
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  onClick={() => {
+                    if (hlsRef.current) hlsRef.current.currentLevel = -1;
+                    setCurrentQuality(-1);
+                  }}
+                  className={`text-[9px] font-bold py-1.5 rounded-lg border transition-all cursor-pointer ${
+                    currentQuality === -1
+                      ? 'bg-red-955/20 border-red-500/30 text-red-500 shadow-sm font-extrabold'
+                      : 'bg-zinc-900/40 border-white/5 text-zinc-450 hover:text-zinc-200'
+                  }`}
+                >
+                  Auto
+                </button>
+                {qualityLevels
+                  .sort((a, b) => b.height - a.height)
+                  .map((level) => (
+                  <button
+                    key={level.index}
+                    onClick={() => {
+                      if (hlsRef.current) hlsRef.current.currentLevel = level.index;
+                      setCurrentQuality(level.index);
+                    }}
+                    className={`text-[9px] font-bold py-1.5 rounded-lg border transition-all cursor-pointer ${
+                      currentQuality === level.index
+                        ? 'bg-red-955/20 border-red-500/30 text-red-500 shadow-sm font-extrabold'
+                        : 'bg-zinc-900/40 border-white/5 text-zinc-450 hover:text-zinc-200'
+                    }`}
+                  >
+                    {level.height}p
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Audio Track Selector — only shown when multiple audio tracks are available */}
+          {audioTracks.length > 1 && (
+            <div className="flex flex-col gap-1.5 text-left border-t border-white/5 pt-3">
+              <label className="text-[9px] text-zinc-500 font-bold tracking-wider uppercase flex items-center gap-1.5">
+                <Languages className="h-3 w-3" />
+                Audio Track
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {audioTracks.map((track) => (
+                  <button
+                    key={track.index}
+                    onClick={() => {
+                      if (hlsRef.current) hlsRef.current.audioTrack = track.index;
+                      setCurrentAudioTrack(track.index);
+                    }}
+                    className={`text-[9px] font-bold py-1.5 px-2 rounded-lg border transition-all cursor-pointer truncate ${
+                      currentAudioTrack === track.index
+                        ? 'bg-red-955/20 border-red-500/30 text-red-500 shadow-sm font-extrabold'
+                        : 'bg-zinc-900/40 border-white/5 text-zinc-450 hover:text-zinc-200'
+                    }`}
+                    title={track.lang ? `${track.name} (${track.lang})` : track.name}
+                  >
+                    {track.lang ? `${track.name} (${track.lang.toUpperCase()})` : track.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Subtitle Track Selector — only shown when subtitle tracks are available */}
+          {subtitleTracks.length > 0 && (
+            <div className="flex flex-col gap-1.5 text-left border-t border-white/5 pt-3">
+              <label className="text-[9px] text-zinc-500 font-bold tracking-wider uppercase flex items-center gap-1.5">
+                <Captions className="h-3 w-3" />
+                Subtitles
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => {
+                    if (hlsRef.current) {
+                      hlsRef.current.subtitleTrack = -1;
+                      hlsRef.current.subtitleDisplay = false;
+                    }
+                    setCurrentSubtitleTrack(-1);
+                  }}
+                  className={`text-[9px] font-bold py-1.5 rounded-lg border transition-all cursor-pointer ${
+                    currentSubtitleTrack === -1
+                      ? 'bg-red-955/20 border-red-500/30 text-red-500 shadow-sm font-extrabold'
+                      : 'bg-zinc-900/40 border-white/5 text-zinc-450 hover:text-zinc-200'
+                  }`}
+                >
+                  Off
+                </button>
+                {subtitleTracks.map((track) => (
+                  <button
+                    key={track.index}
+                    onClick={() => {
+                      if (hlsRef.current) {
+                        hlsRef.current.subtitleTrack = track.index;
+                        hlsRef.current.subtitleDisplay = true;
+                      }
+                      setCurrentSubtitleTrack(track.index);
+                    }}
+                    className={`text-[9px] font-bold py-1.5 px-2 rounded-lg border transition-all cursor-pointer truncate ${
+                      currentSubtitleTrack === track.index
+                        ? 'bg-red-955/20 border-red-500/30 text-red-500 shadow-sm font-extrabold'
+                        : 'bg-zinc-900/40 border-white/5 text-zinc-450 hover:text-zinc-200'
+                    }`}
+                    title={track.lang ? `${track.name} (${track.lang})` : track.name}
+                  >
+                    {track.lang ? `${track.name} (${track.lang.toUpperCase()})` : track.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -59,7 +59,7 @@ export const PlayerPage: React.FC = () => {
     if (playlist.corsError) {
       proxy.setUseCorsProxy(true);
       playlist.setCorsError(null);
-      playlist.fetchPlaylist(playlist.corsError.url, true);
+      playlist.fetchPlaylist(playlist.corsError.url, true, true);
     }
   };
 
@@ -174,7 +174,7 @@ export const PlayerPage: React.FC = () => {
           corsProxyUrl={proxy.corsProxyUrl}
           setCorsProxyUrl={proxy.setCorsProxyUrl}
           onSubmit={(url, epgUrl) => {
-            playlist.fetchPlaylist(url);
+            playlist.fetchPlaylist(url, undefined, true);
             if (epgUrl) epg.fetchEpg(epgUrl);
             setIsChangeModalOpen(false);
           }}

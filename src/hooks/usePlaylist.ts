@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { dbGet, dbSet, dbClearAll } from '../utils/db';
+import { dbGet, dbSet, dbClearAll, dbSetWithTTL, dbGetWithTTL } from '../utils/db';
 import { runParserInWorker } from '../utils/parserWorker';
 import type { IPTVChannel } from '../utils/m3uParser';
 
@@ -29,15 +29,31 @@ export function usePlaylist({ applyProxy, onEpgDiscovered }: UsePlaylistOptions)
     }
   };
 
-  /** Fetch, parse, and persist a playlist from a URL */
-  const fetchPlaylist = useCallback(async (url: string, forceProxyState?: boolean) => {
+  /** Fetch, parse, and persist a playlist from a URL.
+   *  Uses IndexedDB TTL cache (1 hour) to avoid redundant network requests.
+   *  Pass forceRefresh=true to bypass the cache. */
+  const fetchPlaylist = useCallback(async (url: string, forceProxyState?: boolean, forceRefresh?: boolean) => {
     setIsLoading(true);
     setCorsError(null);
     try {
-      const finalUrl = applyProxy(url, forceProxyState);
-      const response = await fetch(finalUrl);
-      if (!response.ok) throw new Error('Network response was not ok');
-      const text = await response.text();
+      const cacheKey = `neostream_m3u_cache_${url}`;
+      let text: string | null = null;
+
+      // Check TTL cache first (skip on force refresh)
+      if (!forceRefresh) {
+        text = await dbGetWithTTL<string>(cacheKey);
+      }
+
+      // Cache miss — fetch from network
+      if (!text) {
+        const finalUrl = applyProxy(url, forceProxyState);
+        const response = await fetch(finalUrl);
+        if (!response.ok) throw new Error('Network response was not ok');
+        text = await response.text();
+
+        // Store raw M3U text with TTL timestamp
+        await dbSetWithTTL(cacheKey, text);
+      }
 
       const { channels: parsedChannels, tvgUrl: parsedEpgUrl } = await runParserInWorker('M3U', text);
 

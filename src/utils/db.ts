@@ -59,3 +59,19 @@ export const dbClearAll = async (): Promise<void> => {
     request.onerror = () => reject(request.error);
   });
 };
+
+/** Default TTL: 1 hour in milliseconds */
+const DEFAULT_TTL_MS = 60 * 60 * 1000;
+
+/** Store a value with a timestamp for TTL-based expiration */
+export const dbSetWithTTL = async (key: string, value: any): Promise<void> => {
+  await dbSet(key, { value, timestamp: Date.now() });
+};
+
+/** Retrieve a value only if it was stored within the TTL window. Returns null if expired or missing. */
+export const dbGetWithTTL = async <T>(key: string, ttlMs: number = DEFAULT_TTL_MS): Promise<T | null> => {
+  const entry = await dbGet<{ value: T; timestamp: number }>(key);
+  if (!entry || !entry.timestamp) return null;
+  if (Date.now() - entry.timestamp > ttlMs) return null;
+  return entry.value;
+};

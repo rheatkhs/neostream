@@ -32,6 +32,10 @@
 | **EPG Program Guide** | Supports XMLTV feeds — displays current & upcoming programs, live progress bars, and schedule timelines per channel |
 | **Web Worker Parsing** | M3U and XMLTV parsing runs in a dedicated inline Web Worker to keep the UI thread responsive on large playlists |
 | **Virtualized Channel List** | Renders thousands of channels efficiently using windowed virtualization with configurable buffer zones |
+| **Stream Quality Selector** | Switch between Auto, 480p, 720p, 1080p and other available resolutions. Syncs with HLS.js adaptive bitrate engine |
+| **Audio Track Selector** | Switch between multiple audio tracks/languages when available in the HLS manifest |
+| **Subtitle Support** | Toggle subtitle tracks on/off with language selection for streams that include embedded subtitles |
+| **Playlist Caching** | M3U playlists are cached in IndexedDB with a 1-hour TTL to avoid redundant network requests on revisits |
 | **Video Fine-Tuning** | On-screen controls for brightness, contrast, saturation, and aspect ratio (Fit / Fill / Zoom) |
 | **Mini Player** | Floating picture-in-picture dock that stays visible while browsing channels — plus native browser PiP support |
 | **CORS Proxy** | Built-in toggle to route streams through a configurable CORS proxy for restricted providers |

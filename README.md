@@ -36,10 +36,12 @@
 | **Audio Track Selector** | Switch between multiple audio tracks/languages when available in the HLS manifest |
 | **Subtitle Support** | Toggle subtitle tracks on/off with language selection for streams that include embedded subtitles |
 | **Playlist Caching** | M3U playlists are cached in IndexedDB with a 1-hour TTL to avoid redundant network requests on revisits |
+| **Favorites Manager** | Star favorite channels to access them quickly via the "⭐ Favorites" virtual category. Persisted in IndexedDB |
+| **Recently Watched** | Automatically tracks the last 15 watched channels, ordered chronologically, in the "🕒 Recent" virtual category |
 | **Video Fine-Tuning** | On-screen controls for brightness, contrast, saturation, and aspect ratio (Fit / Fill / Zoom) |
 | **Mini Player** | Floating picture-in-picture dock that stays visible while browsing channels — plus native browser PiP support |
 | **CORS Proxy** | Built-in toggle to route streams through a configurable CORS proxy for restricted providers |
-| **Persistent State** | Playlist, EPG data, active channel, and volume preferences are persisted via IndexedDB and localStorage |
+| **Persistent State** | Playlist, EPG data, active channel, volume, favorites, and history are persisted via IndexedDB and localStorage |
 | **Keyboard Shortcuts** | `Space` play/pause · `F` fullscreen · `M` mute · `↑↓` volume · `←→` brightness/contrast |
 | **Mobile Responsive** | Adaptive layout with a slide-up drawer for channel browsing on mobile and tablet devices |
 | **Glassmorphism UI** | Premium dark-themed interface with frosted glass panels, smooth animations, and Netflix-inspired aesthetics |

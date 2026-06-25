@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useRef, useEffect, useDeferredValue } from 'react';
-import { Search, Tv, Play, Folder, ChevronDown } from 'lucide-react';
+import { Search, Tv, Play, Folder, ChevronDown, Star, History } from 'lucide-react';
 import type { IPTVChannel } from '../utils/m3uParser';
 import { getChannelPrograms, getCurrentProgram } from '../utils/epgParser';
 import type { EPGMap } from '../utils/epgParser';
+import { dbGet, dbSet } from '../utils/db';
 
 interface SidebarProps {
   channels: IPTVChannel[];
@@ -25,6 +26,65 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [logoErrors, setLogoErrors] = useState<Record<string, boolean>>({});
 
+  // Favorites & Recents State
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [recentIds, setRecentIds] = useState<string[]>([]);
+
+  // Load from IndexedDB on mount
+  useEffect(() => {
+    const loadSavedData = async () => {
+      try {
+        const savedFavs = await dbGet<string[]>('neostream_favorites');
+        if (savedFavs) setFavorites(savedFavs);
+
+        const savedRecents = await dbGet<string[]>('neostream_recent');
+        if (savedRecents) setRecentIds(savedRecents);
+      } catch (err) {
+        console.warn('Failed to load favorites/recents', err);
+      }
+    };
+    loadSavedData();
+  }, []);
+
+  // Update Recently Watched when activeChannel changes
+  useEffect(() => {
+    if (!activeChannel) return;
+
+    setRecentIds(prev => {
+      const next = [activeChannel.id, ...prev.filter(id => id !== activeChannel.id)].slice(0, 15);
+      dbSet('neostream_recent', next).catch(err => console.warn('Failed to save recents', err));
+      return next;
+    });
+  }, [activeChannel]);
+
+  // Handle toggling favorite status
+  const toggleFavorite = async (channelId: string) => {
+    const isFav = favorites.includes(channelId);
+    const next = isFav 
+      ? favorites.filter(id => id !== channelId) 
+      : [...favorites, channelId];
+    
+    setFavorites(next);
+    try {
+      await dbSet('neostream_favorites', next);
+    } catch (err) {
+      console.warn('Failed to save favorites', err);
+    }
+  };
+
+  const isFavorited = (channelId: string) => favorites.includes(channelId);
+
+  // Validate that saved IDs still exist in active channels list
+  const validFavorites = useMemo(() => {
+    const idSet = new Set(channels.map(c => c.id));
+    return favorites.filter(id => idSet.has(id));
+  }, [channels, favorites]);
+
+  const validRecentIds = useMemo(() => {
+    const idSet = new Set(channels.map(c => c.id));
+    return recentIds.filter(id => idSet.has(id));
+  }, [channels, recentIds]);
+
   // Virtualized Scroll State
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -37,29 +97,49 @@ export const Sidebar: React.FC<SidebarProps> = ({
         list.add(ch.group);
       }
     });
-    return ['All', ...Array.from(list).sort()];
-  }, [channels]);
+    
+    const result = ['All'];
+    if (validFavorites.length > 0) result.unshift('⭐ Favorites');
+    if (validRecentIds.length > 0) result.unshift('🕒 Recent');
+
+    return [...result, ...Array.from(list).sort()];
+  }, [channels, validFavorites, validRecentIds]);
 
   // Precalculate channel count per category
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     counts['All'] = channels.length;
+    counts['⭐ Favorites'] = validFavorites.length;
+    counts['🕒 Recent'] = validRecentIds.length;
+
     channels.forEach(ch => {
       if (ch.group) {
         counts[ch.group] = (counts[ch.group] || 0) + 1;
       }
     });
     return counts;
-  }, [channels]);
+  }, [channels, validFavorites, validRecentIds]);
 
   // Filter channels based on search term and category
   const filteredChannels = useMemo(() => {
-    return channels.filter(ch => {
-      const matchesSearch = ch.name.toLowerCase().includes(deferredSearchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'All' || ch.group === selectedCategory;
-      return matchesSearch && matchesCategory;
+    let list = channels;
+
+    if (selectedCategory === '⭐ Favorites') {
+      const favSet = new Set(validFavorites);
+      list = channels.filter(ch => favSet.has(ch.id));
+    } else if (selectedCategory === '🕒 Recent') {
+      const recentSet = new Set(validRecentIds);
+      const matched = channels.filter(ch => recentSet.has(ch.id));
+      const orderMap = new Map(validRecentIds.map((id, index) => [id, index]));
+      list = matched.sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+    } else if (selectedCategory !== 'All') {
+      list = channels.filter(ch => ch.group === selectedCategory);
+    }
+
+    return list.filter(ch => {
+      return ch.name.toLowerCase().includes(deferredSearchTerm.toLowerCase());
     });
-  }, [channels, deferredSearchTerm, selectedCategory]);
+  }, [channels, deferredSearchTerm, selectedCategory, validFavorites, validRecentIds]);
 
   // Reset scroll position on filter/search change
   useEffect(() => {
@@ -148,7 +228,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
-                <Folder className="h-3.5 w-3.5 text-[#E50914] shrink-0" />
+                {selectedCategory === '⭐ Favorites' ? (
+                  <Star className="h-3.5 w-3.5 text-yellow-500 shrink-0 fill-yellow-500" />
+                ) : selectedCategory === '🕒 Recent' ? (
+                  <History className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                ) : (
+                  <Folder className="h-3.5 w-3.5 text-[#E50914] shrink-0" />
+                )}
                 <span className="truncate font-black text-zinc-200 uppercase tracking-widest text-[9px] mt-[1px]">
                   {selectedCategory === 'All' ? 'All Categories' : selectedCategory}
                 </span>
@@ -163,33 +249,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
                 <div className="absolute left-0 right-0 mt-2 max-h-64 overflow-y-auto bg-[#0d0d12] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85)] z-50 custom-scrollbar animate-fade-in p-1.5 flex flex-col gap-1">
-                  {categories.map((category) => (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCategory(category);
-                        setIsDropdownOpen(false);
-                      }}
-                      className={`w-full group/cat flex items-center justify-between px-3 py-2 text-left text-xs rounded-xl transition-all cursor-pointer ${
-                        selectedCategory === category 
-                          ? 'text-white font-extrabold bg-red-955/20 border border-red-500/20 shadow-inner' 
-                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Folder className={`h-3.5 w-3.5 shrink-0 ${selectedCategory === category ? 'text-red-500' : 'text-zinc-500'}`} />
-                        <span className="truncate font-bold tracking-wide">{category}</span>
-                      </div>
-                      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                        selectedCategory === category
-                          ? 'bg-red-500/10 text-red-400'
-                          : 'bg-white/5 text-zinc-500'
-                      }`}>
-                        {categoryCounts[category] || 0}
-                      </span>
-                    </button>
-                  ))}
+                  {categories.map((category) => {
+                    const isFavCategory = category === '⭐ Favorites';
+                    const isRecentCategory = category === '🕒 Recent';
+                    const CatIcon = isFavCategory ? Star : isRecentCategory ? History : Folder;
+                    const catIconColor = isFavCategory 
+                      ? 'text-yellow-500 fill-yellow-500' 
+                      : isRecentCategory 
+                      ? 'text-blue-500' 
+                      : (selectedCategory === category ? 'text-red-500' : 'text-zinc-500');
+
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategory(category);
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`w-full group/cat flex items-center justify-between px-3 py-2 text-left text-xs rounded-xl transition-all cursor-pointer ${
+                          selectedCategory === category 
+                            ? 'text-white font-extrabold bg-red-955/20 border border-red-500/20 shadow-inner' 
+                            : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <CatIcon className={`h-3.5 w-3.5 shrink-0 ${catIconColor}`} />
+                          <span className="truncate font-bold tracking-wide">{category}</span>
+                        </div>
+                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                          selectedCategory === category
+                            ? 'bg-red-500/10 text-red-400'
+                            : 'bg-white/5 text-zinc-500'
+                        }`}>
+                          {categoryCounts[category] || 0}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -289,17 +386,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     )}
                   </div>
 
-                  {/* Active Playing Equalizer Animation or Hover Play icon */}
-                  <div className="shrink-0 flex items-center justify-center w-6 h-6">
-                    {isActive ? (
-                      <div className="flex items-end gap-0.5 h-3.5 w-3.5">
-                        <span className="w-0.5 bg-[#E50914] rounded-full animate-equalizer-1" style={{ height: '60%' }} />
-                        <span className="w-0.5 bg-[#E50914] rounded-full animate-equalizer-2" style={{ height: '100%' }} />
-                        <span className="w-0.5 bg-[#E50914] rounded-full animate-equalizer-3" style={{ height: '40%' }} />
-                      </div>
-                    ) : (
-                      <Play className="h-3 w-3 text-zinc-650 opacity-0 group-hover:opacity-100 transform translate-x-1 group-hover:translate-x-0 transition-all duration-200 fill-zinc-650" />
-                    )}
+                  {/* Right Controls: Star Toggle & Playing Indicator */}
+                  <div className="shrink-0 flex items-center gap-2 relative z-10">
+                    {/* Star Toggle Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleFavorite(channel.id);
+                      }}
+                      className={`p-1.5 rounded-lg hover:bg-white/10 transition-all cursor-pointer ${
+                        isFavorited(channel.id)
+                          ? 'text-yellow-500'
+                          : 'text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-yellow-500'
+                      }`}
+                      title={isFavorited(channel.id) ? 'Remove from Favorites' : 'Add to Favorites'}
+                    >
+                      <Star 
+                        className={`h-3.5 w-3.5 transition-all ${
+                          isFavorited(channel.id) ? 'fill-yellow-500 text-yellow-500' : 'fill-transparent'
+                        }`} 
+                      />
+                    </button>
+
+                    {/* Active Playing Equalizer Animation or Hover Play icon */}
+                    <div className="w-6 h-6 flex items-center justify-center">
+                      {isActive ? (
+                        <div className="flex items-end gap-0.5 h-3.5 w-3.5">
+                          <span className="w-0.5 bg-[#E50914] rounded-full animate-equalizer-1" style={{ height: '60%' }} />
+                          <span className="w-0.5 bg-[#E50914] rounded-full animate-equalizer-2" style={{ height: '100%' }} />
+                          <span className="w-0.5 bg-[#E50914] rounded-full animate-equalizer-3" style={{ height: '40%' }} />
+                        </div>
+                      ) : (
+                        <Play className="h-3 w-3 text-zinc-650 opacity-0 group-hover:opacity-100 transform translate-x-1 group-hover:translate-x-0 transition-all duration-200 fill-zinc-650" />
+                      )}
+                    </div>
                   </div>
                 </button>
               );

@@ -24,16 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [showHelp, setShowHelp] = useState(false);
 
-  const getCleanPlaylistName = (url: string) => {
-    try {
-      const parsedUrl = new URL(url);
-      const pathname = parsedUrl.pathname;
-      const fileName = pathname.substring(pathname.lastIndexOf('/') + 1);
-      return fileName || parsedUrl.hostname;
-    } catch {
-      return url.substring(url.lastIndexOf('/') + 1) || 'IPTV Stream';
-    }
-  };
+
 
   return (
     <div className="w-full bg-[#030303]/75 backdrop-blur-xl border-b border-white/5 px-4 sm:px-6 py-3 sticky top-0 z-40 transition-all shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
@@ -44,23 +35,40 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Active Playlist metadata */}
         {hasPlaylist && (
-          <div className="hidden lg:flex items-center gap-2.5 bg-zinc-950/60 px-4 py-2 rounded-xl border border-white/5 text-[10px] text-zinc-350 backdrop-blur-md font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-zinc-500 tracking-wider">ACTIVE FEED:</span>
-            <span className="truncate max-w-[200px] text-zinc-200 font-bold" title={currentUrl}>
-              {getCleanPlaylistName(currentUrl)}
-            </span>
+          <div className="hidden lg:flex items-center gap-3.5 bg-zinc-950/45 px-3.5 py-1.5 rounded-xl border border-white/5 text-[10px] backdrop-blur-md font-medium shadow-[inset_0_1px_1px_rgba(255,255,255,0.02)]">
+            {/* Active Feed URL */}
+            <div className="flex items-center gap-2 max-w-[280px] xl:max-w-[450px]">
+              <div className="relative flex h-1.5 w-1.5 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+              </div>
+              <span className="text-zinc-500 tracking-wider text-[9px] uppercase font-black shrink-0">FEED</span>
+              <span className="font-mono text-zinc-300 truncate hover:text-zinc-150 transition-colors" title={currentUrl}>
+                {currentUrl}
+              </span>
+            </div>
+
+            {/* EPG Feed URL */}
             {currentEpgUrl && (
-              <span className="text-zinc-500 border-l border-white/5 pl-3 flex items-center gap-1">
+              <div className="flex items-center gap-2 border-l border-white/5 pl-3.5 max-w-[200px] xl:max-w-[300px]">
                 {isEpgLoading ? (
                   <RefreshCw className="h-3 w-3 text-red-500 animate-spin shrink-0" />
                 ) : (
-                  <Radio className="h-3 w-3 text-red-500 shrink-0" />
+                  <Radio className="h-3 w-3 text-emerald-500 shrink-0" />
                 )}
-                {isEpgLoading ? 'EPG Loading...' : 'EPG Active'}
-              </span>
+                <span className="text-zinc-550 tracking-wider text-[9px] uppercase font-black shrink-0">EPG</span>
+                <span className="font-mono text-zinc-400 truncate" title={currentEpgUrl}>
+                  {currentEpgUrl}
+                </span>
+              </div>
             )}
-            {useCorsProxy && <Badge variant="danger">PROXY ACTIVE</Badge>}
+
+            {/* Proxy Info */}
+            {useCorsProxy && (
+              <div className="border-l border-white/5 pl-3.5 shrink-0">
+                <Badge variant="danger">PROXY ACTIVE</Badge>
+              </div>
+            )}
           </div>
         )}
 

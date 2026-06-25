@@ -6,6 +6,14 @@
   --animate-equalizer-2: equalizer-2 1.2s ease-in-out infinite alternate;
   --animate-equalizer-3: equalizer-3 0.8s ease-in-out infinite alternate;
 
+  --color-zinc-550: #61616a;
+  --color-zinc-650: #48484f;
+  --color-zinc-850: #202023;
+
+  --color-red-550: #e50914;
+  --color-red-650: #c60812;
+  --color-red-655: #ac0c14;
+
   @keyframes equalizer-1 {
     0% {
       height: 30%;

@@ -36,6 +36,7 @@
 | **Audio Track Selector** | Switch between multiple audio tracks/languages when available in the HLS manifest |
 | **Subtitle Support** | Toggle subtitle tracks on/off with language selection for streams that include embedded subtitles |
 | **Playlist Caching** | M3U playlists are cached in IndexedDB with a 1-hour TTL to avoid redundant network requests on revisits |
+| **Local File Upload** | Drag & drop or select local `.m3u` / `.m3u8` / `.txt` playlist files to parse and watch them offline/locally |
 | **Favorites Manager** | Star favorite channels to access them quickly via the "⭐ Favorites" virtual category. Persisted in IndexedDB |
 | **Recently Watched** | Automatically tracks the last 15 watched channels, ordered chronologically, in the "🕒 Recent" virtual category |
 | **Video Fine-Tuning** | On-screen controls for brightness, contrast, saturation, and aspect ratio (Fit / Fill / Zoom) |

@@ -173,8 +173,12 @@ export const PlayerPage: React.FC = () => {
           setUseCorsProxy={proxy.setUseCorsProxy}
           corsProxyUrl={proxy.corsProxyUrl}
           setCorsProxyUrl={proxy.setCorsProxyUrl}
-          onSubmit={(url, epgUrl) => {
-            playlist.fetchPlaylist(url, undefined, true);
+          onSubmit={(url, epgUrl, file) => {
+            if (file) {
+              playlist.loadLocalPlaylist(file);
+            } else {
+              playlist.fetchPlaylist(url, undefined, true);
+            }
             if (epgUrl) epg.fetchEpg(epgUrl);
             setIsChangeModalOpen(false);
           }}

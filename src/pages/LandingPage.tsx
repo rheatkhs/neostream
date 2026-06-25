@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Link, Download, RefreshCw, Radio } from 'lucide-react';
+import { Link, Download, RefreshCw, Radio, UploadCloud } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 import { CorsToggle } from '../components/ui/CorsToggle';
 import { Footer } from '../components/layout/Footer';
@@ -21,21 +21,56 @@ export const LandingPage: React.FC = () => {
     onEpgDiscovered: epg.fetchEpg,
   });
 
+  const [activeTab, setActiveTab] = useState<'url' | 'file'>('url');
   const [urlInput, setUrlInput] = useState('');
   const [epgInput, setEpgInput] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (urlInput.trim()) {
-      await playlist.fetchPlaylist(urlInput.trim());
-      if (epgInput.trim()) {
-        epg.fetchEpg(epgInput.trim());
+    if (activeTab === 'url') {
+      if (urlInput.trim()) {
+        await playlist.fetchPlaylist(urlInput.trim());
+        if (epgInput.trim()) {
+          epg.fetchEpg(epgInput.trim());
+        }
+        setTimeout(() => navigate('/player'), 100);
       }
-      // Navigate to player after successful fetch
-      // Use a small delay to let state settle into IndexedDB
-      setTimeout(() => navigate('/player'), 100);
+    } else {
+      if (selectedFile) {
+        await playlist.loadLocalPlaylist(selectedFile);
+        if (epgInput.trim()) {
+          epg.fetchEpg(epgInput.trim());
+        }
+        setTimeout(() => navigate('/player'), 100);
+      }
     }
   };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.name.endsWith('.m3u') || file.name.endsWith('.m3u8') || file.name.endsWith('.txt')) {
+        setSelectedFile(file);
+      } else {
+        alert('Please drop an M3U file (.m3u, .m3u8)');
+      }
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const isSubmitDisabled = activeTab === 'url' ? !urlInput.trim() : !selectedFile;
 
   return (
     <div className="flex-1 flex flex-col justify-between w-full h-full bg-[#030303] relative px-4 sm:px-6 py-6 sm:py-12 md:py-20 select-none overflow-y-auto font-sans">
@@ -61,26 +96,82 @@ export const LandingPage: React.FC = () => {
               Connect Playlist
             </h2>
             <p className="text-zinc-500 text-xs md:text-sm max-w-lg mx-auto leading-relaxed font-semibold">
-              Paste an M3U playlist link to start playing live television streams instantly.
+              Enter an M3U playlist link or upload a local playlist file to start streaming.
             </p>
           </div>
 
-          {/* URL Input Form */}
+          {/* Tab Selector */}
+          <div className="flex bg-zinc-900/60 p-1 rounded-2xl max-w-xs mx-auto border border-white/5">
+            <button
+              type="button"
+              onClick={() => setActiveTab('url')}
+              className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
+                activeTab === 'url' ? 'bg-[#E50914] text-white shadow-lg' : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              Remote URL
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('file')}
+              className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
+                activeTab === 'file' ? 'bg-[#E50914] text-white shadow-lg' : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              Local File
+            </button>
+          </div>
+
+          {/* Input Form */}
           <form onSubmit={handleSubmit} className="w-full max-w-2xl mx-auto space-y-5">
-            <div className="relative group text-left">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-red-500 transition-colors">
-                <Link className="h-4.5 w-4.5" />
+            {activeTab === 'url' ? (
+              <>
+                <div className="relative group text-left">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-red-500 transition-colors">
+                    <Link className="h-4.5 w-4.5" />
+                  </div>
+                  <input
+                    type="url"
+                    required
+                    placeholder="Enter M3U Playlist URL"
+                    className="w-full glass-input rounded-2xl pl-12 pr-4 py-4 text-sm text-zinc-100 placeholder-zinc-550 focus:outline-none focus:ring-0 transition-all duration-200 font-bold"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    disabled={playlist.isLoading}
+                  />
+                </div>
+
+                {/* CORS Proxy Toggle */}
+                <CorsToggle
+                  checked={proxy.useCorsProxy}
+                  onChange={proxy.setUseCorsProxy}
+                  size="md"
+                />
+              </>
+            ) : (
+              /* Drag & Drop File Zone */
+              <div
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full glass-input rounded-2xl py-12 px-6 flex flex-col items-center justify-center border-2 border-dashed border-zinc-700/60 hover:border-red-550 transition-all cursor-pointer select-none text-center"
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".m3u,.m3u8,.txt"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <UploadCloud className={`h-12 w-12 mb-3 transition-colors ${selectedFile ? 'text-red-500' : 'text-zinc-500'}`} />
+                <span className="text-sm font-bold text-zinc-300">
+                  {selectedFile ? selectedFile.name : 'Select or drag local M3U file'}
+                </span>
+                <span className="text-[11px] font-semibold text-zinc-500 mt-2">
+                  {selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB` : 'Supports .m3u, .m3u8, .txt (Max 50MB)'}
+                </span>
               </div>
-              <input
-                type="url"
-                required
-                placeholder="Enter M3U Playlist URL"
-                className="w-full glass-input rounded-2xl pl-12 pr-4 py-4 text-sm text-zinc-100 placeholder-zinc-550 focus:outline-none focus:ring-0 transition-all duration-200 font-bold"
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                disabled={playlist.isLoading}
-              />
-            </div>
+            )}
 
             {/* EPG Input field */}
             <div className="relative group text-left">
@@ -97,13 +188,6 @@ export const LandingPage: React.FC = () => {
               />
             </div>
 
-            {/* CORS Proxy Toggle */}
-            <CorsToggle
-              checked={proxy.useCorsProxy}
-              onChange={proxy.setUseCorsProxy}
-              size="md"
-            />
-
             {playlist.isLoading ? (
               <button
                 type="button"
@@ -116,7 +200,7 @@ export const LandingPage: React.FC = () => {
             ) : (
               <button
                 type="submit"
-                disabled={!urlInput.trim()}
+                disabled={isSubmitDisabled}
                 className="w-full bg-[#E50914] hover:bg-[#F40B17] text-white disabled:bg-zinc-850 disabled:text-zinc-550 disabled:border-transparent rounded-2xl py-4 text-xs md:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-xl hover:scale-[1.01]"
               >
                 <Download className="h-4.5 w-4.5" />

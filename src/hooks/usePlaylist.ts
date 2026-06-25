@@ -121,6 +121,35 @@ export function usePlaylist({ applyProxy, onEpgDiscovered }: UsePlaylistOptions)
     }
   }, []);
 
+  /** Parse and load a local playlist file */
+  const loadLocalPlaylist = useCallback(async (file: File) => {
+    setIsLoading(true);
+    setCorsError(null);
+    try {
+      const text = await file.text();
+      const { channels: parsedChannels, tvgUrl: parsedEpgUrl } = await runParserInWorker('M3U', text);
+
+      if (parsedChannels.length === 0) {
+        alert('No streaming channels found. Check playlist format.');
+      } else {
+        setChannels(parsedChannels);
+        setPlaylistUrl('local-file');
+        setPlaylistName(file.name);
+        await saveToDB('local-file', file.name, parsedChannels);
+        setActiveChannel(null);
+
+        if (parsedEpgUrl && onEpgDiscovered) {
+          onEpgDiscovered(parsedEpgUrl);
+        }
+      }
+    } catch (error) {
+      console.error('File read/parse error:', error);
+      alert('Failed to read or parse local M3U file.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onEpgDiscovered]);
+
   return {
     playlistUrl,
     playlistName,
@@ -131,6 +160,7 @@ export function usePlaylist({ applyProxy, onEpgDiscovered }: UsePlaylistOptions)
     setCorsError,
     hasPlaylist,
     fetchPlaylist,
+    loadLocalPlaylist,
     selectChannel,
     clearPlaylist,
     restorePlaylist,
